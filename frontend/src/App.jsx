@@ -850,7 +850,7 @@ function JobCard({ job, candidates, onSave }) {
             {locationStr && <span className="job-tag">{locationStr}</span>}
             {job.job_type && <span className="job-tag">{job.job_type}</span>}
             {job.salary && <span className="job-tag salary">{job.salary}</span>}
-            <span className="job-tag source">{job.source}</span>
+            <span className={`job-tag source ${job.source?.startsWith('Gov:') ? 'gov-source' : ''}`}>{job.source}</span>
           </div>
         </div>
         <div className="job-card-actions" onClick={e => e.stopPropagation()}>

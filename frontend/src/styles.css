@@ -575,6 +575,13 @@ body {
   border-color: #6366f1;
 }
 
+.job-tag.source.gov-source {
+  color: #059669;
+  border-color: #059669;
+  background: #ecfdf5;
+  font-weight: 600;
+}
+
 .job-card-actions {
   display: flex;
   gap: 0.5rem;
