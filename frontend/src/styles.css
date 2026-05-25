@@ -653,3 +653,298 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ===== Auto-Apply Agent ===== */
+.agent-section h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+}
+
+.agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.agent-subtitle {
+  font-size: 0.85rem;
+  color: #71717a;
+}
+
+.agent-config {
+  background: #1a1b23;
+  border: 1px solid #2a2b35;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.agent-config h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #a1a1aa;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.config-item label {
+  display: block;
+  font-size: 0.75rem;
+  color: #71717a;
+  margin-bottom: 0.3rem;
+}
+
+.config-item input[type="number"] {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: #22232d;
+  border: 1px solid #3a3b45;
+  border-radius: 8px;
+  color: #e4e4e7;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.config-item input[type="number"]:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.config-item.checkbox-item label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #e4e4e7;
+  cursor: pointer;
+}
+
+.config-item.checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #6366f1;
+}
+
+.config-note {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #71717a;
+}
+
+.config-note strong {
+  color: #8b5cf6;
+}
+
+.agent-running {
+  text-align: center;
+  padding: 2rem;
+  background: #1a1b23;
+  border: 1px solid #2a2b35;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.agent-running p {
+  color: #a1a1aa;
+  font-size: 0.85rem;
+}
+
+.agent-result {
+  background: #1a1b23;
+  border: 1px solid #2a2b35;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.agent-result.error {
+  border-color: #ef4444;
+}
+
+.agent-result h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #a1a1aa;
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 0.85rem;
+}
+
+.result-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.result-stat {
+  text-align: center;
+}
+
+.result-number {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #8b5cf6;
+}
+
+.result-label {
+  font-size: 0.75rem;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.agent-queue {
+  margin-bottom: 1.5rem;
+}
+
+.agent-queue h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.queue-card {
+  background: #1a1b23;
+  border: 1px solid #2a2b35;
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: border-color 0.2s;
+}
+
+.queue-card:hover {
+  border-color: #3a3b45;
+}
+
+.queue-card-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.queue-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.queue-card-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #e4e4e7;
+  margin-bottom: 0.2rem;
+}
+
+.queue-card-company {
+  font-size: 0.85rem;
+  color: #8b5cf6;
+  margin-bottom: 0.5rem;
+}
+
+.queue-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.queue-card-score {
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.score-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.4rem;
+}
+
+.score-circle span {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #10b981;
+}
+
+.queue-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.badge-ready {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.queue-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #2a2b35;
+}
+
+/* Agent Log */
+.agent-log {
+  background: #1a1b23;
+  border: 1px solid #2a2b35;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.agent-log h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #a1a1aa;
+}
+
+.log-entries {
+  max-height: 250px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+}
+
+.log-entry {
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #22232d;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.log-entry.warning .log-msg { color: #f59e0b; }
+.log-entry.error .log-msg { color: #ef4444; }
+
+.log-time {
+  color: #52525b;
+  flex-shrink: 0;
+}
+
+.log-msg {
+  color: #a1a1aa;
+  word-break: break-word;
+}

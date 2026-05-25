@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from .models.database import Base, engine
-from .routers import candidates, applications, dashboard, jobs
+from .routers import candidates, applications, dashboard, jobs, agent
 
 Base.metadata.create_all(bind=engine)
 
@@ -28,6 +28,7 @@ app.include_router(candidates.router)
 app.include_router(applications.router)
 app.include_router(dashboard.router)
 app.include_router(jobs.router)
+app.include_router(agent.router)
 
 
 @app.get("/api/health")

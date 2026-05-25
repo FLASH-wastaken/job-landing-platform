@@ -34,6 +34,17 @@ function App() {
   const [scrapeResults, setScrapeResults] = useState([])
   const [scraping, setScraping] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
+  // Agent state
+  const [agentRunning, setAgentRunning] = useState(false)
+  const [agentResult, setAgentResult] = useState(null)
+  const [agentQueue, setAgentQueue] = useState([])
+  const [agentConfig, setAgentConfig] = useState({
+    min_match_score: 40,
+    max_jobs_per_candidate: 10,
+    search_limit: 20,
+    auto_tailor: true,
+    auto_cover_letter: true,
+  })
 
   useEffect(() => {
     fetchDashboard()
@@ -188,6 +199,63 @@ function App() {
     fetchDashboard()
   }
 
+  // Agent functions
+  async function runAgent() {
+    setAgentRunning(true)
+    setAgentResult(null)
+    try {
+      const body = { ...agentConfig }
+      if (selectedCandidate) {
+        body.candidate_ids = [selectedCandidate.id]
+      }
+      const res = await fetch(`${API}/agent/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      setAgentResult(data)
+      fetchAgentQueue()
+      fetchApplications(selectedCandidate?.id)
+      fetchDashboard()
+    } catch (e) {
+      setAgentResult({ status: 'error', error: e.message })
+    }
+    setAgentRunning(false)
+  }
+
+  async function fetchAgentQueue() {
+    try {
+      const res = await fetch(`${API}/agent/queue`)
+      if (res.ok) {
+        const data = await res.json()
+        setAgentQueue(data.applications || [])
+      }
+    } catch (e) { console.error(e) }
+  }
+
+  async function approveJob(appId) {
+    await fetch(`${API}/agent/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ application_id: appId, action: 'approve' }),
+    })
+    fetchAgentQueue()
+    fetchApplications(selectedCandidate?.id)
+    fetchDashboard()
+  }
+
+  async function rejectJob(appId) {
+    await fetch(`${API}/agent/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ application_id: appId, action: 'reject' }),
+    })
+    fetchAgentQueue()
+    fetchApplications(selectedCandidate?.id)
+    fetchDashboard()
+  }
+
   const pipelineApps = PIPELINE_COLUMNS.reduce((acc, status) => {
     acc[status] = applications.filter(a => a.status === status)
     return acc
@@ -263,6 +331,9 @@ function App() {
             </button>
             <button className={activeTab === 'jobsearch' ? 'active' : ''} onClick={() => setActiveTab('jobsearch')}>
               🔍 Job Search
+            </button>
+            <button className={activeTab === 'agent' ? 'active' : ''} onClick={() => { setActiveTab('agent'); fetchAgentQueue() }}>
+              Auto-Apply Agent
             </button>
             <button className={activeTab === 'suggestions' ? 'active' : ''} onClick={() => setActiveTab('suggestions')}>
               Suggestions ({dashboard?.top_suggestions?.length || 0})
@@ -406,6 +477,182 @@ function App() {
                 <div className="empty-state" style={{ marginTop: '2rem' }}>
                   <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Search for jobs or paste a company careers URL</p>
                   <p style={{ color: '#71717a', fontSize: '0.85rem' }}>Results come from Remotive, Arbeitnow, Himalayas, and career page scraping</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'agent' && (
+            <div className="agent-section">
+              <div className="agent-header">
+                <div>
+                  <h2>Auto-Apply Agent</h2>
+                  <p className="agent-subtitle">Discovers, scores, and queues jobs automatically for your candidates</p>
+                </div>
+                <button
+                  className={`btn ${agentRunning ? 'btn-warning' : 'btn-primary'}`}
+                  onClick={runAgent}
+                  disabled={agentRunning}
+                >
+                  {agentRunning ? 'Agent Running...' : 'Run Agent Now'}
+                </button>
+              </div>
+
+              {/* Agent Config */}
+              <div className="agent-config">
+                <h3>Configuration</h3>
+                <div className="config-grid">
+                  <div className="config-item">
+                    <label>Min Match Score</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={agentConfig.min_match_score}
+                      onChange={e => setAgentConfig({ ...agentConfig, min_match_score: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="config-item">
+                    <label>Max Jobs Per Candidate</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={agentConfig.max_jobs_per_candidate}
+                      onChange={e => setAgentConfig({ ...agentConfig, max_jobs_per_candidate: parseInt(e.target.value) || 5 })}
+                    />
+                  </div>
+                  <div className="config-item">
+                    <label>Search Limit</label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="50"
+                      value={agentConfig.search_limit}
+                      onChange={e => setAgentConfig({ ...agentConfig, search_limit: parseInt(e.target.value) || 20 })}
+                    />
+                  </div>
+                  <div className="config-item checkbox-item">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={agentConfig.auto_tailor}
+                        onChange={e => setAgentConfig({ ...agentConfig, auto_tailor: e.target.checked })}
+                      />
+                      Auto-tailor resumes
+                    </label>
+                  </div>
+                  <div className="config-item checkbox-item">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={agentConfig.auto_cover_letter}
+                        onChange={e => setAgentConfig({ ...agentConfig, auto_cover_letter: e.target.checked })}
+                      />
+                      Auto-generate cover letters
+                    </label>
+                  </div>
+                </div>
+                {selectedCandidate && (
+                  <p className="config-note">Running for: <strong>{selectedCandidate.name}</strong> (select "All Candidates" in sidebar to run for everyone)</p>
+                )}
+              </div>
+
+              {/* Agent Running Indicator */}
+              {agentRunning && (
+                <div className="agent-running">
+                  <div className="spinner"></div>
+                  <p>Agent is searching job boards, scoring matches, and tailoring resumes...</p>
+                </div>
+              )}
+
+              {/* Agent Results */}
+              {agentResult && !agentRunning && (
+                <div className={`agent-result ${agentResult.status === 'error' ? 'error' : ''}`}>
+                  <h3>Last Run Results</h3>
+                  {agentResult.status === 'error' ? (
+                    <p className="error-text">Error: {agentResult.error}</p>
+                  ) : (
+                    <div className="result-stats">
+                      <div className="result-stat">
+                        <span className="result-number">{agentResult.total_discovered || 0}</span>
+                        <span className="result-label">Jobs Discovered</span>
+                      </div>
+                      <div className="result-stat">
+                        <span className="result-number">{agentResult.total_qualified || 0}</span>
+                        <span className="result-label">Passed Score Filter</span>
+                      </div>
+                      <div className="result-stat">
+                        <span className="result-number">{agentResult.total_queued || 0}</span>
+                        <span className="result-label">Queued for Review</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Approval Queue */}
+              <div className="agent-queue">
+                <h3>Approval Queue ({agentQueue.length})</h3>
+                {agentQueue.length === 0 ? (
+                  <div className="empty-state">
+                    <p>No jobs in queue. Run the agent to discover matching jobs.</p>
+                  </div>
+                ) : (
+                  <div className="queue-list">
+                    {agentQueue.map(item => (
+                      <div key={item.id} className="queue-card">
+                        <div className="queue-card-main">
+                          <div className="queue-card-info">
+                            <div className="queue-card-title">{item.title}</div>
+                            <div className="queue-card-company">{item.company}</div>
+                            <div className="queue-card-meta">
+                              {item.candidate_name && <span className="job-tag">{item.candidate_name}</span>}
+                              {item.location && <span className="job-tag">{item.location}</span>}
+                              {item.salary && <span className="job-tag salary">{item.salary}</span>}
+                            </div>
+                          </div>
+                          <div className="queue-card-score">
+                            <div className="score-circle">
+                              <span>{item.match_score || '?'}%</span>
+                            </div>
+                            <div className="queue-badges">
+                              {item.has_tailored_resume && <span className="badge-ready">Resume</span>}
+                              {item.has_cover_letter && <span className="badge-ready">Cover Letter</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="queue-card-actions">
+                          <button className="btn btn-success btn-sm" onClick={() => approveJob(item.id)}>
+                            Approve & Apply
+                          </button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => rejectJob(item.id)}>
+                            Reject
+                          </button>
+                          {item.url && (
+                            <a href={item.url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+                              View Listing
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Agent Log */}
+              {agentResult?.log && agentResult.log.length > 0 && (
+                <div className="agent-log">
+                  <h3>Agent Log</h3>
+                  <div className="log-entries">
+                    {agentResult.log.map((entry, i) => (
+                      <div key={i} className={`log-entry ${entry.level}`}>
+                        <span className="log-time">{new Date(entry.time).toLocaleTimeString()}</span>
+                        <span className="log-msg">{entry.message}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
