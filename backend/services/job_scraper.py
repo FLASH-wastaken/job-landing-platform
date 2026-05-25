@@ -110,6 +110,94 @@ async def search_himalayas(query: str, limit: int = 20) -> list[dict]:
         return []
 
 
+async def search_linkedin_public(query: str, location: str = "", limit: int = 25) -> list[dict]:
+    """
+    Search LinkedIn public job listings (no API key needed).
+    Uses LinkedIn's guest job search endpoint which returns HTML.
+    Great for India and global job searches.
+    """
+    try:
+        params = {
+            "keywords": query,
+            "start": 0,
+        }
+        if location:
+            params["location"] = location
+
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            resp = await client.get(
+                "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search",
+                params=params,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                },
+            )
+            if resp.status_code != 200:
+                print(f"LinkedIn search returned {resp.status_code}")
+                return []
+
+            html = resp.text
+            jobs = []
+
+            # Parse job cards from LinkedIn HTML
+            # Each job card is in a <li> with class containing "result-card"
+            # or a <div> with class "base-card"
+            card_pattern = re.compile(
+                r'<div[^>]*class="[^"]*base-card[^"]*"[^>]*>(.*?)</div>\s*</li>',
+                re.DOTALL | re.IGNORECASE,
+            )
+
+            # Broader fallback: find all job links and titles
+            title_pattern = re.compile(
+                r'<a[^>]*jobs/view/[^"]*"[^>]*>\s*(.*?)\s*</a>',
+                re.DOTALL | re.IGNORECASE,
+            )
+            company_pattern = re.compile(
+                r'<h4[^>]*>\s*<a[^>]*>(.*?)</a>\s*</h4>',
+                re.DOTALL | re.IGNORECASE,
+            )
+            location_pattern = re.compile(
+                r'<span[^>]*job-search-card__location[^>]*>(.*?)</span>',
+                re.DOTALL | re.IGNORECASE,
+            )
+            link_pattern = re.compile(
+                r'<a[^>]*href="(https://[^"]*linkedin\.com/jobs/view/[^"]*)"',
+                re.IGNORECASE,
+            )
+
+            titles = [clean_html(t) for t in title_pattern.findall(html)]
+            companies = [clean_html(c) for c in company_pattern.findall(html)]
+            locations = [clean_html(l) for l in location_pattern.findall(html)]
+            links = link_pattern.findall(html)
+
+            # Remove tracking params from links
+            clean_links = []
+            for link in links:
+                clean_url = link.split("?")[0]
+                if clean_url not in clean_links:
+                    clean_links.append(clean_url)
+
+            count = min(len(titles), len(companies), limit)
+            for i in range(count):
+                jobs.append({
+                    "title": titles[i].strip(),
+                    "company": companies[i].strip() if i < len(companies) else "",
+                    "location": locations[i].strip() if i < len(locations) else "",
+                    "url": clean_links[i] if i < len(clean_links) else "",
+                    "description": "",
+                    "salary": "",
+                    "job_type": "",
+                    "posted_at": "",
+                    "source": "LinkedIn",
+                    "tags": [],
+                })
+
+            return jobs[:limit]
+    except Exception as e:
+        print(f"LinkedIn search error: {e}")
+        return []
+
+
 async def scrape_career_page(url: str) -> list[dict]:
     """
     Scrape a company career/jobs page for job listings.
@@ -191,10 +279,12 @@ def extract_company_from_url(url: str) -> str:
 
 
 def clean_html(html_text: str) -> str:
-    """Remove HTML tags from text."""
+    """Remove HTML tags and decode entities from text."""
     if not html_text:
         return ""
+    import html
     clean = re.sub(r"<[^>]+>", " ", html_text)
+    clean = html.unescape(clean)  # Decode &amp; &lt; etc.
     clean = re.sub(r"\s+", " ", clean)
     return clean.strip()[:2000]  # Cap at 2000 chars
 
@@ -208,11 +298,12 @@ async def search_all_sources(query: str, location: str = "", limit: int = 15) ->
     if location:
         search_query = f"{query} {location}"
 
-    # Run all searches concurrently
+    # Run all searches concurrently (LinkedIn gets raw query + location separately)
     results = await asyncio.gather(
         search_remotive(search_query, limit),
         search_arbeitnow(search_query, limit),
         search_himalayas(search_query, limit),
+        search_linkedin_public(query, location, limit),
         return_exceptions=True,
     )
 
