@@ -1,0 +1,480 @@
+import React, { useState, useEffect } from 'react'
+
+const API = '/api'
+
+const STATUS_LABELS = {
+  saved: 'Saved',
+  tailoring: 'Tailoring',
+  applied: 'Applied',
+  awaiting_response: 'Awaiting Response',
+  follow_up_sent: 'Follow-up Sent',
+  interview_scheduled: 'Interview',
+  interview_completed: 'Interviewed',
+  offer_received: 'Offer!',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
+}
+
+const PIPELINE_COLUMNS = ['saved', 'applied', 'awaiting_response', 'follow_up_sent', 'interview_scheduled', 'offer_received']
+
+function App() {
+  const [dashboard, setDashboard] = useState(null)
+  const [candidates, setCandidates] = useState([])
+  const [selectedCandidate, setSelectedCandidate] = useState(null)
+  const [applications, setApplications] = useState([])
+  const [showAddCandidate, setShowAddCandidate] = useState(false)
+  const [showAddApplication, setShowAddApplication] = useState(false)
+  const [selectedApp, setSelectedApp] = useState(null)
+  const [activeTab, setActiveTab] = useState('pipeline')
+
+  useEffect(() => {
+    fetchDashboard()
+    fetchCandidates()
+  }, [])
+
+  useEffect(() => {
+    if (selectedCandidate) {
+      fetchApplications(selectedCandidate.id)
+    } else {
+      fetchApplications()
+    }
+  }, [selectedCandidate])
+
+  async function fetchDashboard() {
+    try {
+      const res = await fetch(`${API}/dashboard`)
+      if (res.ok) setDashboard(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
+  async function fetchCandidates() {
+    try {
+      const res = await fetch(`${API}/candidates`)
+      if (res.ok) setCandidates(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
+  async function fetchApplications(candidateId) {
+    try {
+      const url = candidateId ? `${API}/applications?candidate_id=${candidateId}` : `${API}/applications`
+      const res = await fetch(url)
+      if (res.ok) setApplications(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
+  async function refreshSuggestions() {
+    await fetch(`${API}/dashboard/refresh-suggestions`, { method: 'POST' })
+    fetchDashboard()
+  }
+
+  async function addCandidate(data) {
+    const res = await fetch(`${API}/candidates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (res.ok) {
+      fetchCandidates()
+      fetchDashboard()
+      setShowAddCandidate(false)
+    }
+  }
+
+  async function addApplication(data) {
+    const res = await fetch(`${API}/applications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (res.ok) {
+      fetchApplications(selectedCandidate?.id)
+      fetchDashboard()
+      setShowAddApplication(false)
+    }
+  }
+
+  async function updateStatus(appId, status) {
+    await fetch(`${API}/applications/${appId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+    fetchApplications(selectedCandidate?.id)
+    fetchDashboard()
+  }
+
+  async function dismissSuggestion(id) {
+    await fetch(`${API}/applications/suggestions/${id}/dismiss`, { method: 'PUT' })
+    fetchDashboard()
+  }
+
+  async function completeSuggestion(id) {
+    await fetch(`${API}/applications/suggestions/${id}/complete`, { method: 'PUT' })
+    fetchDashboard()
+  }
+
+  const pipelineApps = PIPELINE_COLUMNS.reduce((acc, status) => {
+    acc[status] = applications.filter(a => a.status === status)
+    return acc
+  }, {})
+
+  return (
+    <div className="app">
+      <header className="header">
+        <h1>Job Landing Platform</h1>
+        <div className="header-actions">
+          <button className="btn btn-secondary" onClick={refreshSuggestions}>
+            Refresh Suggestions
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowAddCandidate(true)}>
+            + Add Candidate
+          </button>
+        </div>
+      </header>
+
+      <div className="main-content">
+        <aside className="sidebar">
+          <h3>Candidates</h3>
+          <div
+            className={`candidate-item ${!selectedCandidate ? 'active' : ''}`}
+            onClick={() => setSelectedCandidate(null)}
+          >
+            <div className="name">All Candidates</div>
+            <div className="role">Overview</div>
+          </div>
+          <ul className="candidate-list">
+            {candidates.map(c => (
+              <li
+                key={c.id}
+                className={`candidate-item ${selectedCandidate?.id === c.id ? 'active' : ''}`}
+                onClick={() => setSelectedCandidate(c)}
+              >
+                <div className="name">{c.name}</div>
+                <div className="role">{c.target_role}</div>
+                <div className="stats">
+                  <span className="stat-badge active">{c.active_applications} active</span>
+                  <span className="stat-badge">{c.total_applications} total</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </aside>
+
+        <main className="content-area">
+          {/* Metrics */}
+          <div className="dashboard-grid">
+            <div className="metric-card">
+              <div className="label">Total Applications</div>
+              <div className="value purple">{dashboard?.total_applications || 0}</div>
+            </div>
+            <div className="metric-card">
+              <div className="label">Awaiting Response</div>
+              <div className="value yellow">{dashboard?.pipeline?.awaiting_response || 0}</div>
+            </div>
+            <div className="metric-card">
+              <div className="label">Interviews</div>
+              <div className="value blue">{dashboard?.pipeline?.interview_scheduled || 0}</div>
+            </div>
+            <div className="metric-card">
+              <div className="label">Actions Needed</div>
+              <div className="value green">{dashboard?.top_suggestions?.length || 0}</div>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="tab-nav">
+            <button className={activeTab === 'pipeline' ? 'active' : ''} onClick={() => setActiveTab('pipeline')}>
+              Pipeline
+            </button>
+            <button className={activeTab === 'suggestions' ? 'active' : ''} onClick={() => setActiveTab('suggestions')}>
+              Suggestions ({dashboard?.top_suggestions?.length || 0})
+            </button>
+          </div>
+
+          {activeTab === 'pipeline' && (
+            <div className="pipeline-section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h2>{selectedCandidate ? `${selectedCandidate.name}'s Pipeline` : 'All Applications'}</h2>
+                {selectedCandidate && (
+                  <button className="btn btn-primary" onClick={() => setShowAddApplication(true)}>
+                    + New Application
+                  </button>
+                )}
+              </div>
+              <div className="pipeline-board">
+                {PIPELINE_COLUMNS.map(status => (
+                  <div key={status} className="pipeline-column">
+                    <div className="column-header">
+                      <span className="column-title">{STATUS_LABELS[status]}</span>
+                      <span className="column-count">{pipelineApps[status]?.length || 0}</span>
+                    </div>
+                    {pipelineApps[status]?.map(app => (
+                      <div key={app.id} className="app-card" onClick={() => setSelectedApp(app)}>
+                        <div className="company">{app.company_name}</div>
+                        <div className="title">{app.job_title}</div>
+                        {app.match_score && (
+                          <div className="score">
+                            Match: {app.match_score}%
+                            <div className="score-bar">
+                              <div
+                                className={`score-fill ${app.match_score >= 70 ? 'high' : app.match_score >= 40 ? 'medium' : 'low'}`}
+                                style={{ width: `${app.match_score}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        {app.suggestion_count > 0 && (
+                          <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', color: '#f59e0b' }}>
+                            {app.suggestion_count} action{app.suggestion_count > 1 ? 's' : ''} needed
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {(!pipelineApps[status] || pipelineApps[status].length === 0) && (
+                      <div style={{ fontSize: '0.75rem', color: '#52525b', textAlign: 'center', padding: '1rem' }}>
+                        No applications
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'suggestions' && (
+            <div className="suggestions-section">
+              <h2>Action Items</h2>
+              {dashboard?.top_suggestions?.length === 0 && (
+                <div className="empty-state">
+                  <p>No suggestions right now. Keep applying!</p>
+                </div>
+              )}
+              {dashboard?.top_suggestions?.map(s => (
+                <div key={s.id} className="suggestion-card">
+                  <div className={`priority-dot ${s.priority >= 8 ? 'high' : s.priority >= 6 ? 'medium' : 'low'}`} />
+                  <div className="suggestion-content">
+                    <div className="suggestion-title">{s.title}</div>
+                    <div className="suggestion-context">{s.candidate_name} &middot; {s.job_title} at {s.company}</div>
+                    <div className="suggestion-desc">{s.description}</div>
+                    {s.draft_message && (
+                      <div className="draft-preview">{s.draft_message}</div>
+                    )}
+                    <div className="suggestion-actions">
+                      <button className="btn btn-success" onClick={() => completeSuggestion(s.id)}>
+                        Mark Done
+                      </button>
+                      <button className="btn btn-secondary" onClick={() => dismissSuggestion(s.id)}>
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Add Candidate Modal */}
+      {showAddCandidate && (
+        <AddCandidateModal onSave={addCandidate} onClose={() => setShowAddCandidate(false)} />
+      )}
+
+      {/* Add Application Modal */}
+      {showAddApplication && selectedCandidate && (
+        <AddApplicationModal
+          candidateId={selectedCandidate.id}
+          onSave={addApplication}
+          onClose={() => setShowAddApplication(false)}
+        />
+      )}
+
+      {/* Application Detail Modal */}
+      {selectedApp && (
+        <AppDetailModal
+          app={selectedApp}
+          onClose={() => setSelectedApp(null)}
+          onStatusChange={(status) => { updateStatus(selectedApp.id, status); setSelectedApp(null) }}
+        />
+      )}
+    </div>
+  )
+}
+
+function AddCandidateModal({ onSave, onClose }) {
+  const [form, setForm] = useState({
+    name: '', email: '', field: '', target_role: '',
+    linkedin_url: '', skills: '', years_experience: '',
+    location_preference: '', base_resume_text: '',
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSave({
+      ...form,
+      years_experience: form.years_experience ? parseInt(form.years_experience) : null,
+    })
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <h2>Add Candidate</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Name *</label>
+            <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Email</label>
+            <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Field *</label>
+            <input required placeholder="e.g., Software Engineering, Marketing, Data Science" value={form.field} onChange={e => setForm({ ...form, field: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Target Role *</label>
+            <input required placeholder="e.g., Senior Frontend Engineer" value={form.target_role} onChange={e => setForm({ ...form, target_role: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>LinkedIn URL</label>
+            <input value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Skills (comma-separated)</label>
+            <input placeholder="React, Python, AWS, ..." value={form.skills} onChange={e => setForm({ ...form, skills: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Years of Experience</label>
+            <input type="number" value={form.years_experience} onChange={e => setForm({ ...form, years_experience: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Location Preference</label>
+            <input placeholder="Remote, NYC, SF Bay Area..." value={form.location_preference} onChange={e => setForm({ ...form, location_preference: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Resume Text (paste full resume)</label>
+            <textarea rows="8" placeholder="Paste the full text of the base resume here..." value={form.base_resume_text} onChange={e => setForm({ ...form, base_resume_text: e.target.value })} />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Add Candidate</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function AddApplicationModal({ candidateId, onSave, onClose }) {
+  const [form, setForm] = useState({
+    candidate_id: candidateId,
+    company_name: '', job_title: '', job_url: '',
+    job_description: '', salary_range: '', location: '',
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSave(form)
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <h2>Add Job Application</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Company Name *</label>
+            <input required value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Job Title *</label>
+            <input required value={form.job_title} onChange={e => setForm({ ...form, job_title: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Job URL</label>
+            <input value={form.job_url} onChange={e => setForm({ ...form, job_url: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Salary Range</label>
+            <input placeholder="$120k-$160k" value={form.salary_range} onChange={e => setForm({ ...form, salary_range: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Location</label>
+            <input placeholder="Remote, Hybrid - NYC, etc." value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Job Description (paste full JD for resume tailoring)</label>
+            <textarea rows="10" placeholder="Paste the full job description here. This is used to tailor the resume and calculate match score." value={form.job_description} onChange={e => setForm({ ...form, job_description: e.target.value })} />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Create & Tailor Resume</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function AppDetailModal({ app, onClose, onStatusChange }) {
+  const nextStatuses = {
+    saved: ['applied'],
+    applied: ['awaiting_response', 'withdrawn'],
+    awaiting_response: ['follow_up_sent', 'interview_scheduled', 'rejected', 'withdrawn'],
+    follow_up_sent: ['interview_scheduled', 'rejected', 'withdrawn'],
+    interview_scheduled: ['interview_completed', 'withdrawn'],
+    interview_completed: ['offer_received', 'rejected'],
+    offer_received: ['withdrawn'],
+  }
+
+  const available = nextStatuses[app.status] || []
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <h2>{app.job_title}</h2>
+        <p style={{ color: '#a1a1aa', marginBottom: '1rem' }}>{app.company_name}</p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#71717a' }}>Status</div>
+            <div style={{ fontWeight: 600 }}>{STATUS_LABELS[app.status]}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#71717a' }}>Match Score</div>
+            <div style={{ fontWeight: 600 }}>{app.match_score ? `${app.match_score}%` : 'N/A'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#71717a' }}>Applied</div>
+            <div>{app.applied_at ? new Date(app.applied_at).toLocaleDateString() : 'Not yet'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#71717a' }}>Location</div>
+            <div>{app.location || 'N/A'}</div>
+          </div>
+        </div>
+
+        {available.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '0.8rem', color: '#71717a', marginBottom: '0.5rem' }}>Move to:</div>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {available.map(s => (
+                <button key={s} className="btn btn-secondary" onClick={() => onStatusChange(s)}>
+                  {STATUS_LABELS[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="form-actions">
+          <button className="btn btn-secondary" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default App
