@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: job-landing-platform
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    repo: https://github.com/FLASH-wastaken/job-landing-platform.git
+    branch: master
+    plan: free
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
+    healthCheckPath: /api/health
