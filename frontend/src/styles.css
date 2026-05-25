@@ -469,3 +469,187 @@ body {
 .tab-nav button:hover {
   color: #e4e4e7;
 }
+
+/* Job Search */
+.job-search-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.search-form {
+  margin-bottom: 0.5rem;
+}
+
+.search-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  background: #1a1b23;
+  border: 1px solid #3a3b45;
+  border-radius: 10px;
+  color: #e4e4e7;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.search-input.location-input {
+  flex: 0.5;
+}
+
+.search-input::placeholder {
+  color: #52525b;
+}
+
+.job-card {
+  background: #1a1b23;
+  border: 1px solid #2a2b35;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  transition: border-color 0.2s;
+}
+
+.job-card:hover {
+  border-color: #3a3b45;
+}
+
+.job-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  cursor: pointer;
+}
+
+.job-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.job-card-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #e4e4e7;
+  margin-bottom: 0.25rem;
+}
+
+.job-card-company {
+  font-size: 0.85rem;
+  color: #8b5cf6;
+  margin-bottom: 0.5rem;
+}
+
+.job-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.job-tag {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  background: #22232d;
+  border: 1px solid #2a2b35;
+  border-radius: 20px;
+  color: #a1a1aa;
+}
+
+.job-tag.salary {
+  color: #10b981;
+  border-color: #10b981;
+}
+
+.job-tag.source {
+  color: #6366f1;
+  border-color: #6366f1;
+}
+
+.job-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.candidate-select {
+  padding: 0.45rem 0.65rem;
+  background: #22232d;
+  border: 1px solid #3a3b45;
+  border-radius: 8px;
+  color: #e4e4e7;
+  font-size: 0.78rem;
+  font-family: inherit;
+  min-width: 140px;
+}
+
+.candidate-select:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.85rem !important;
+  font-size: 0.78rem !important;
+}
+
+.job-card-desc {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #2a2b35;
+  font-size: 0.8rem;
+  color: #a1a1aa;
+  line-height: 1.6;
+}
+
+.job-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-size: 0.78rem;
+  color: #6366f1;
+  text-decoration: none;
+}
+
+.job-link:hover {
+  text-decoration: underline;
+}
+
+.save-toast {
+  background: #10b981;
+  color: white;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #2a2b35;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

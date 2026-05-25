@@ -26,6 +26,14 @@ function App() {
   const [showAddApplication, setShowAddApplication] = useState(false)
   const [selectedApp, setSelectedApp] = useState(null)
   const [activeTab, setActiveTab] = useState('pipeline')
+  const [jobSearchResults, setJobSearchResults] = useState([])
+  const [jobSearching, setJobSearching] = useState(false)
+  const [jobQuery, setJobQuery] = useState('')
+  const [jobLocation, setJobLocation] = useState('')
+  const [careerUrl, setCareerUrl] = useState('')
+  const [scrapeResults, setScrapeResults] = useState([])
+  const [scraping, setScraping] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
 
   useEffect(() => {
     fetchDashboard()
@@ -101,6 +109,73 @@ function App() {
     })
     fetchApplications(selectedCandidate?.id)
     fetchDashboard()
+  }
+
+  async function searchJobs(e) {
+    e?.preventDefault()
+    if (!jobQuery.trim()) return
+    setJobSearching(true)
+    setJobSearchResults([])
+    try {
+      const params = new URLSearchParams({ q: jobQuery.trim(), limit: '20' })
+      if (jobLocation.trim()) params.set('location', jobLocation.trim())
+      const res = await fetch(`${API}/jobs/search?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        setJobSearchResults(data.jobs || [])
+      }
+    } catch (e) { console.error(e) }
+    setJobSearching(false)
+  }
+
+  async function scrapeCareerPage(e) {
+    e?.preventDefault()
+    if (!careerUrl.trim()) return
+    setScraping(true)
+    setScrapeResults([])
+    try {
+      const res = await fetch(`${API}/jobs/scrape-careers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: careerUrl.trim() }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setScrapeResults(data.jobs || [])
+      }
+    } catch (e) { console.error(e) }
+    setScraping(false)
+  }
+
+  async function saveJobToPipeline(job, candidateId) {
+    try {
+      const res = await fetch(`${API}/jobs/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidate_id: candidateId,
+          title: job.title,
+          company: job.company,
+          url: job.url,
+          description: job.description,
+          location: typeof job.location === 'object' ? job.location.join(', ') : (job.location || ''),
+          salary: job.salary || '',
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSaveMessage(`Saved! Match: ${data.match_score ? data.match_score + '%' : 'N/A'}`)
+        fetchApplications(selectedCandidate?.id)
+        fetchDashboard()
+        setTimeout(() => setSaveMessage(''), 3000)
+      } else {
+        setSaveMessage(data.detail || 'Error saving')
+        setTimeout(() => setSaveMessage(''), 3000)
+      }
+    } catch (e) {
+      setSaveMessage('Error saving job')
+      setTimeout(() => setSaveMessage(''), 3000)
+    }
   }
 
   async function dismissSuggestion(id) {
@@ -186,6 +261,9 @@ function App() {
             <button className={activeTab === 'pipeline' ? 'active' : ''} onClick={() => setActiveTab('pipeline')}>
               Pipeline
             </button>
+            <button className={activeTab === 'jobsearch' ? 'active' : ''} onClick={() => setActiveTab('jobsearch')}>
+              🔍 Job Search
+            </button>
             <button className={activeTab === 'suggestions' ? 'active' : ''} onClick={() => setActiveTab('suggestions')}>
               Suggestions ({dashboard?.top_suggestions?.length || 0})
             </button>
@@ -238,6 +316,98 @@ function App() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'jobsearch' && (
+            <div className="job-search-section">
+              <h2>Find Jobs</h2>
+
+              {saveMessage && (
+                <div className="save-toast">{saveMessage}</div>
+              )}
+
+              {/* Search Form */}
+              <form onSubmit={searchJobs} className="search-form">
+                <div className="search-row">
+                  <input
+                    className="search-input"
+                    placeholder="Job title, skills, or keywords..."
+                    value={jobQuery}
+                    onChange={e => setJobQuery(e.target.value)}
+                  />
+                  <input
+                    className="search-input location-input"
+                    placeholder="Location (optional)"
+                    value={jobLocation}
+                    onChange={e => setJobLocation(e.target.value)}
+                  />
+                  <button type="submit" className="btn btn-primary" disabled={jobSearching}>
+                    {jobSearching ? 'Searching...' : 'Search Jobs'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Career Page Scraper */}
+              <form onSubmit={scrapeCareerPage} className="search-form" style={{ marginTop: '0.75rem' }}>
+                <div className="search-row">
+                  <input
+                    className="search-input"
+                    placeholder="Paste company careers page URL to scrape..."
+                    value={careerUrl}
+                    onChange={e => setCareerUrl(e.target.value)}
+                    style={{ flex: 2 }}
+                  />
+                  <button type="submit" className="btn btn-secondary" disabled={scraping}>
+                    {scraping ? 'Scraping...' : 'Scrape Careers Page'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Search Results */}
+              {jobSearchResults.length > 0 && (
+                <div className="search-results">
+                  <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem', color: '#e4e4e7' }}>
+                    Found {jobSearchResults.length} jobs
+                  </h3>
+                  {jobSearchResults.map((job, i) => (
+                    <JobCard key={`search-${i}`} job={job} candidates={candidates} onSave={saveJobToPipeline} />
+                  ))}
+                </div>
+              )}
+
+              {/* Scrape Results */}
+              {scrapeResults.length > 0 && (
+                <div className="search-results">
+                  <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem', color: '#e4e4e7' }}>
+                    Found {scrapeResults.length} openings on career page
+                  </h3>
+                  {scrapeResults.map((job, i) => (
+                    <JobCard key={`scrape-${i}`} job={job} candidates={candidates} onSave={saveJobToPipeline} />
+                  ))}
+                </div>
+              )}
+
+              {jobSearching && (
+                <div className="empty-state">
+                  <div className="spinner"></div>
+                  <p>Searching across multiple job boards...</p>
+                </div>
+              )}
+
+              {scraping && (
+                <div className="empty-state">
+                  <div className="spinner"></div>
+                  <p>Scraping career page for openings...</p>
+                </div>
+              )}
+
+              {!jobSearching && !scraping && jobSearchResults.length === 0 && scrapeResults.length === 0 && (
+                <div className="empty-state" style={{ marginTop: '2rem' }}>
+                  <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Search for jobs or paste a company careers URL</p>
+                  <p style={{ color: '#71717a', fontSize: '0.85rem' }}>Results come from Remotive, Arbeitnow, Himalayas, and career page scraping</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -414,6 +584,58 @@ function AddApplicationModal({ candidateId, onSave, onClose }) {
           </div>
         </form>
       </div>
+    </div>
+  )
+}
+
+function JobCard({ job, candidates, onSave }) {
+  const [selectedCandidate, setSelectedCandidate] = useState('')
+  const [expanded, setExpanded] = useState(false)
+  const locationStr = typeof job.location === 'object' ? job.location.join(', ') : (job.location || '')
+
+  return (
+    <div className="job-card">
+      <div className="job-card-header" onClick={() => setExpanded(!expanded)}>
+        <div className="job-card-info">
+          <div className="job-card-title">{job.title}</div>
+          <div className="job-card-company">{job.company}</div>
+          <div className="job-card-meta">
+            {locationStr && <span className="job-tag">{locationStr}</span>}
+            {job.job_type && <span className="job-tag">{job.job_type}</span>}
+            {job.salary && <span className="job-tag salary">{job.salary}</span>}
+            <span className="job-tag source">{job.source}</span>
+          </div>
+        </div>
+        <div className="job-card-actions" onClick={e => e.stopPropagation()}>
+          <select
+            value={selectedCandidate}
+            onChange={e => setSelectedCandidate(e.target.value)}
+            className="candidate-select"
+          >
+            <option value="">Select person...</option>
+            {candidates.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <button
+            className="btn btn-primary btn-sm"
+            disabled={!selectedCandidate}
+            onClick={() => onSave(job, parseInt(selectedCandidate))}
+          >
+            Save to Pipeline
+          </button>
+        </div>
+      </div>
+      {expanded && job.description && (
+        <div className="job-card-desc">
+          {job.description.substring(0, 500)}{job.description.length > 500 ? '...' : ''}
+        </div>
+      )}
+      {job.url && (
+        <a href={job.url} target="_blank" rel="noopener noreferrer" className="job-link" onClick={e => e.stopPropagation()}>
+          View Full Listing →
+        </a>
+      )}
     </div>
   )
 }
