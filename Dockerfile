@@ -17,4 +17,4 @@ COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 ENV PORT=8000
 EXPOSE 8000
 
-CMD gunicorn backend.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT}
+CMD ["/bin/sh", "-c", "gunicorn backend.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT"]
