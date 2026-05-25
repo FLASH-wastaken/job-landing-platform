@@ -198,6 +198,215 @@ async def search_linkedin_public(query: str, location: str = "", limit: int = 25
         return []
 
 
+async def search_indeed(query: str, location: str = "", limit: int = 15) -> list[dict]:
+    """
+    Search Indeed for jobs via their public search pages.
+    Supports country-specific domains (in.indeed.com for India, etc.).
+    """
+    try:
+        # Pick domain based on location
+        domain = "www.indeed.com"
+        loc_lower = (location or "").lower()
+        if any(kw in loc_lower for kw in ["india", "mumbai", "bangalore", "bengaluru", "delhi", "pune", "hyderabad", "chennai"]):
+            domain = "in.indeed.com"
+        elif any(kw in loc_lower for kw in ["uk", "london", "england"]):
+            domain = "uk.indeed.com"
+        elif any(kw in loc_lower for kw in ["canada", "toronto", "vancouver"]):
+            domain = "ca.indeed.com"
+
+        params = {"q": query}
+        if location:
+            params["l"] = location
+        params["fromage"] = "30"  # Last 30 days
+        params["limit"] = str(limit)
+
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            resp = await client.get(
+                f"https://{domain}/jobs",
+                params=params,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept": "text/html,application/xhtml+xml",
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
+            )
+            if resp.status_code != 200:
+                print(f"Indeed returned {resp.status_code}")
+                return []
+
+            html = resp.text
+            jobs = []
+
+            # Parse Indeed job cards — look for job title links and metadata
+            # Indeed uses h2.jobTitle > a for titles, [data-testid="company-name"] for companies
+            title_pattern = re.compile(
+                r'<a[^>]*id="job_([^"]*)"[^>]*>.*?<span[^>]*>(.*?)</span>',
+                re.DOTALL | re.IGNORECASE,
+            )
+            # Broader fallback: find job titles in spans within h2s
+            title_fallback = re.compile(
+                r'<h2[^>]*jobTitle[^>]*>.*?<span[^>]*>(.*?)</span>',
+                re.DOTALL | re.IGNORECASE,
+            )
+            company_pattern = re.compile(
+                r'data-testid="company-name"[^>]*>(.*?)<',
+                re.DOTALL | re.IGNORECASE,
+            )
+            location_pattern = re.compile(
+                r'data-testid="text-location"[^>]*>(.*?)<',
+                re.DOTALL | re.IGNORECASE,
+            )
+
+            titles = [clean_html(t) for t in title_pattern.findall(html)]
+            if not titles:
+                titles_raw = title_fallback.findall(html)
+                titles = [(f"job_{i}", clean_html(t)) for i, t in enumerate(titles_raw)]
+
+            companies = [clean_html(c) for c in company_pattern.findall(html)]
+            locations = [clean_html(l) for l in location_pattern.findall(html)]
+
+            count = min(len(titles), limit)
+            for i in range(count):
+                job_id = titles[i][0] if isinstance(titles[i], tuple) else f"job_{i}"
+                job_title = titles[i][1] if isinstance(titles[i], tuple) else titles[i]
+
+                jobs.append({
+                    "title": job_title.strip(),
+                    "company": companies[i].strip() if i < len(companies) else "",
+                    "location": locations[i].strip() if i < len(locations) else location,
+                    "url": f"https://{domain}/viewjob?jk={job_id}" if not job_id.startswith("job_") else "",
+                    "description": "",
+                    "salary": "",
+                    "job_type": "",
+                    "posted_at": "",
+                    "source": "Indeed",
+                    "tags": [],
+                })
+
+            return jobs[:limit]
+    except Exception as e:
+        print(f"Indeed search error: {e}")
+        return []
+
+
+async def search_glassdoor(query: str, location: str = "", limit: int = 15) -> list[dict]:
+    """
+    Search Glassdoor for jobs via their public search page.
+    """
+    try:
+        loc_lower = (location or "").lower()
+        # Build Glassdoor URL
+        if any(kw in loc_lower for kw in ["india", "mumbai", "bangalore", "delhi", "pune"]):
+            base = "https://www.glassdoor.co.in"
+        else:
+            base = "https://www.glassdoor.com"
+
+        search_url = f"{base}/Job/jobs.htm"
+        params = {"sc.keyword": query}
+        if location:
+            params["locT"] = "C"
+            params["locKeyword"] = location
+
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            resp = await client.get(
+                search_url,
+                params=params,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept": "text/html,application/xhtml+xml",
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Referer": base,
+                },
+            )
+            if resp.status_code != 200:
+                print(f"Glassdoor returned {resp.status_code}")
+                return []
+
+            html = resp.text
+            jobs = []
+
+            # Glassdoor job cards contain job title links and employer names
+            title_pattern = re.compile(
+                r'<a[^>]*data-test="job-link"[^>]*[^>]*>(.*?)</a>',
+                re.DOTALL | re.IGNORECASE,
+            )
+            # Fallback: look for job titles in any job-link-like pattern
+            title_fallback = re.compile(
+                r'class="[^"]*JobCard[^"]*"[^>]*>.*?<a[^>]*>(.*?)</a>',
+                re.DOTALL | re.IGNORECASE,
+            )
+            company_pattern = re.compile(
+                r'class="[^"]*EmployerProfile[^"]*"[^>]*>(.*?)<',
+                re.DOTALL | re.IGNORECASE,
+            )
+            location_pattern = re.compile(
+                r'class="[^"]*location[^"]*"[^>]*>(.*?)<',
+                re.DOTALL | re.IGNORECASE,
+            )
+
+            titles = [clean_html(t) for t in title_pattern.findall(html)]
+            if not titles:
+                titles = [clean_html(t) for t in title_fallback.findall(html)]
+            companies = [clean_html(c) for c in company_pattern.findall(html)]
+            locations_found = [clean_html(l) for l in location_pattern.findall(html)]
+
+            count = min(len(titles), limit)
+            for i in range(count):
+                jobs.append({
+                    "title": titles[i].strip(),
+                    "company": companies[i].strip() if i < len(companies) else "",
+                    "location": locations_found[i].strip() if i < len(locations_found) else location,
+                    "url": "",
+                    "description": "",
+                    "salary": "",
+                    "job_type": "",
+                    "posted_at": "",
+                    "source": "Glassdoor",
+                    "tags": [],
+                })
+
+            return jobs[:limit]
+    except Exception as e:
+        print(f"Glassdoor search error: {e}")
+        return []
+
+
+async def search_jobicy(query: str, limit: int = 15) -> list[dict]:
+    """Search Jobicy API for remote jobs (free, no key needed)."""
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                "https://jobicy.com/api/v2/remote-jobs",
+                params={"count": limit, "tag": query.split()[0].lower()},
+            )
+            if resp.status_code != 200:
+                return []
+
+            data = resp.json()
+            jobs = []
+            for job in data.get("jobs", [])[:limit]:
+                salary = ""
+                if job.get("annualSalaryMin"):
+                    salary = f"${job['annualSalaryMin']:,} - ${job.get('annualSalaryMax', 0):,}"
+
+                jobs.append({
+                    "title": job.get("jobTitle", ""),
+                    "company": job.get("companyName", ""),
+                    "location": job.get("jobGeo", "Remote"),
+                    "url": job.get("url", ""),
+                    "description": clean_html(job.get("jobDescription", ""))[:500],
+                    "salary": salary,
+                    "job_type": job.get("jobType", ""),
+                    "posted_at": job.get("pubDate", ""),
+                    "source": "Jobicy",
+                    "tags": [job.get("jobIndustry", "")] if job.get("jobIndustry") else [],
+                })
+            return jobs
+    except Exception as e:
+        print(f"Jobicy search error: {e}")
+        return []
+
+
 async def scrape_career_page(url: str) -> list[dict]:
     """
     Scrape a company career/jobs page for job listings.
@@ -298,12 +507,15 @@ async def search_all_sources(query: str, location: str = "", limit: int = 15) ->
     if location:
         search_query = f"{query} {location}"
 
-    # Run all searches concurrently (LinkedIn gets raw query + location separately)
+    # Run all searches concurrently
     results = await asyncio.gather(
         search_remotive(search_query, limit),
         search_arbeitnow(search_query, limit),
         search_himalayas(search_query, limit),
         search_linkedin_public(query, location, limit),
+        search_indeed(query, location, limit),
+        search_glassdoor(query, location, limit),
+        search_jobicy(query, limit),
         return_exceptions=True,
     )
 
