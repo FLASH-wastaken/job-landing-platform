@@ -321,4 +321,24 @@ async def search_all_sources(query: str, location: str = "", limit: int = 15) ->
             seen.add(key)
             unique_jobs.append(job)
 
+    # Sort: prioritize jobs matching the location filter, then LinkedIn results
+    if location:
+        loc_lower = location.lower()
+
+        def relevance_score(job):
+            score = 0
+            job_loc = job.get("location", "")
+            if isinstance(job_loc, list):
+                job_loc = ", ".join(job_loc)
+            job_loc_lower = job_loc.lower()
+            # Location match gets highest priority
+            if loc_lower in job_loc_lower:
+                score += 100
+            # LinkedIn tends to be most relevant for specific locations
+            if job.get("source") == "LinkedIn":
+                score += 50
+            return -score  # negative for ascending sort
+
+        unique_jobs.sort(key=relevance_score)
+
     return unique_jobs
