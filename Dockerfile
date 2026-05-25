@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
-ENV PORT=8000
-EXPOSE 8000
+COPY start.sh .
+RUN chmod +x start.sh
 
-CMD ["/bin/sh", "-c", "gunicorn backend.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT"]
+CMD ["./start.sh"]
