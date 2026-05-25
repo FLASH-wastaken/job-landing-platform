@@ -168,11 +168,16 @@ def extract_company_from_url(url: str) -> str:
 
 def _job(title, company, location, url, description="", salary="",
          job_type="", posted_at="", source="", tags=None):
-    """Build a standardised job dict."""
+    """Build a standardised job dict. Auto-decodes HTML entities in title/company."""
+    # Decode any HTML entities (handles double-encoding like &amp;amp;)
+    t = html_module.unescape(html_module.unescape(title.strip())) if title else ""
+    c = html_module.unescape(html_module.unescape(company.strip())) if company else ""
+    loc = location if isinstance(location, str) else ", ".join(location) if location else ""
+    loc = html_module.unescape(loc) if loc else ""
     return {
-        "title": title.strip() if title else "",
-        "company": company.strip() if company else "",
-        "location": location if isinstance(location, str) else ", ".join(location) if location else "",
+        "title": t,
+        "company": c,
+        "location": loc,
         "url": url.strip() if url else "",
         "description": description,
         "salary": salary,
