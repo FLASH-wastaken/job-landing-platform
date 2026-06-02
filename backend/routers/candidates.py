@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime, timezone
+from typing import Optional
 
 from ..models.database import get_db
 from ..models.schemas import Candidate, Application, ApplicationStatus
+from ..services.linkedin_parser import parse_linkedin_pdf, parse_linkedin_text
 
 router = APIRouter(prefix="/api/candidates", tags=["candidates"])
 
@@ -148,3 +150,27 @@ def delete_candidate(candidate_id: int, db: Session = Depends(get_db)):
     db.delete(candidate)
     db.commit()
     return {"message": "Candidate deleted"}
+
+
+@router.post("/import-linkedin")
+async def import_from_linkedin(
+    file: Optional[UploadFile] = File(None),
+    text: Optional[str] = Form(None),
+):
+    """Import candidate data from LinkedIn PDF export or pasted profile text."""
+    if file:
+        if not file.filename.lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail="Only PDF files are supported")
+        contents = await file.read()
+        if len(contents) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+        result = parse_linkedin_pdf(contents)
+    elif text:
+        result = parse_linkedin_text(text)
+    else:
+        raise HTTPException(status_code=400, detail="Provide either a PDF file or text")
+
+    if "error" in result:
+        raise HTTPException(status_code=422, detail=result["error"])
+
+    return result

@@ -24,6 +24,26 @@ body {
   justify-content: space-between;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sidebar-toggle {
+  display: none;
+  background: none;
+  border: 1px solid #3a3b45;
+  border-radius: 8px;
+  color: #e4e4e7;
+  font-size: 1.1rem;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
 .header h1 {
   font-size: 1.4rem;
   font-weight: 600;
@@ -1785,4 +1805,486 @@ body {
   gap: 0.35rem;
   align-items: center;
   flex-shrink: 0;
+}
+
+/* ===== LinkedIn Import ===== */
+.linkedin-import {
+  background: #22232d;
+  border: 1px solid #3a3b45;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.linkedin-import-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.linkedin-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.linkedin-buttons {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.linkedin-import-body {
+  margin-top: 0.75rem;
+}
+
+.import-hint {
+  font-size: 0.78rem;
+  color: #71717a;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.file-input {
+  font-size: 0.82rem;
+  color: #a1a1aa;
+}
+
+.file-input::file-selector-button {
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid #3a3b45;
+  background: #2a2b35;
+  color: #e4e4e7;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-right: 0.75rem;
+}
+
+.file-input::file-selector-button:hover {
+  background: #3a3b45;
+}
+
+.import-msg {
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.import-msg.success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.import-msg.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* ===== Mobile Responsive ===== */
+@media (max-width: 1024px) {
+  .main-content {
+    grid-template-columns: 220px 1fr;
+  }
+
+  .pipeline-board {
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+  }
+
+  .quiz-options-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .header h1 {
+    font-size: 1.1rem;
+  }
+
+  .header-actions {
+    gap: 0.4rem;
+  }
+
+  .header-actions .btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.78rem;
+  }
+
+  .sidebar-toggle {
+    display: flex;
+  }
+
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    z-index: 999;
+    border-right: 1px solid #2a2b35;
+    transition: left 0.25s ease;
+    padding-top: 1rem;
+  }
+
+  .sidebar.open {
+    left: 0;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .content-area {
+    padding: 1rem;
+  }
+
+  /* Metrics grid */
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+
+  .metric-card {
+    padding: 0.85rem;
+  }
+
+  .metric-card .value {
+    font-size: 1.4rem;
+  }
+
+  .metric-card .label {
+    font-size: 0.65rem;
+  }
+
+  /* Tabs — scrollable */
+  .tab-nav {
+    overflow-x: auto;
+    gap: 0;
+    flex-wrap: nowrap;
+    padding-bottom: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab-nav button {
+    white-space: nowrap;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+
+  .tab-nav .discover-tab,
+  .tab-nav .alerts-tab {
+    margin-left: 0;
+  }
+
+  /* Pipeline board — horizontal scroll */
+  .pipeline-board {
+    display: flex;
+    overflow-x: auto;
+    gap: 0.75rem;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pipeline-column {
+    min-width: 200px;
+    flex-shrink: 0;
+  }
+
+  .pipeline-section h2 {
+    font-size: 1rem;
+  }
+
+  /* Job search */
+  .search-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .search-input.location-input {
+    flex: 1;
+  }
+
+  /* Job cards */
+  .job-card-header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .job-card-actions {
+    width: 100%;
+  }
+
+  .candidate-select {
+    flex: 1;
+  }
+
+  /* Agent section */
+  .agent-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .config-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .result-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  .result-number {
+    font-size: 1.4rem;
+  }
+
+  /* Queue cards */
+  .queue-card-main {
+    flex-direction: column;
+  }
+
+  .queue-card-score {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .queue-badges {
+    flex-direction: row;
+  }
+
+  .queue-card-actions {
+    flex-wrap: wrap;
+  }
+
+  /* Suggestions */
+  .suggestion-card {
+    padding: 1rem;
+  }
+
+  /* Modals */
+  .modal {
+    width: 95%;
+    max-height: 90vh;
+    padding: 1.25rem;
+    border-radius: 12px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  /* LinkedIn import */
+  .linkedin-import-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .linkedin-buttons {
+    width: 100%;
+  }
+
+  .linkedin-buttons .btn {
+    flex: 1;
+  }
+
+  /* Quiz */
+  .quiz-intro-title {
+    font-size: 1.5rem;
+  }
+
+  .quiz-intro-steps {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .quiz-options-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quiz-option {
+    padding: 0.85rem 1rem;
+  }
+
+  .workstyle-options {
+    flex-direction: column;
+  }
+
+  /* Discovery results */
+  .quiz-results-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .role-card-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .role-card-actions {
+    flex-direction: column;
+  }
+
+  .role-card-actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .discovery-auto-apply-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .discovery-auto-apply-header .btn-lg {
+    width: 100%;
+  }
+
+  /* Alerts */
+  .alerts-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .alert-card-header {
+    flex-direction: column;
+  }
+
+  .alert-card-actions {
+    width: 100%;
+  }
+
+  .alert-feed-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .alert-feed-actions {
+    width: 100%;
+  }
+
+  .alert-result-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
+  .auto-apply-job-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .header h1 {
+    font-size: 0.95rem;
+  }
+
+  .content-area {
+    padding: 0.75rem;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .metric-card {
+    padding: 0.65rem;
+  }
+
+  .metric-card .value {
+    font-size: 1.2rem;
+  }
+
+  .tab-nav button {
+    padding: 0.5rem 0.65rem;
+    font-size: 0.72rem;
+  }
+
+  .pipeline-column {
+    min-width: 170px;
+  }
+
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .btn {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.8rem;
+  }
+
+  .btn-sm {
+    padding: 0.35rem 0.7rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  .btn-lg {
+    padding: 0.65rem 1.5rem !important;
+    font-size: 0.9rem !important;
+  }
+
+  .quiz-intro-title {
+    font-size: 1.3rem;
+  }
+
+  .quiz-step-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .quiz-option-icon {
+    font-size: 1.1rem;
+  }
+
+  .quiz-option-label {
+    font-size: 0.82rem;
+  }
+
+  .role-card {
+    padding: 1rem;
+  }
+
+  .role-card-title {
+    font-size: 0.95rem;
+  }
+
+  .selected-roles-chips {
+    gap: 0.3rem;
+  }
+
+  .role-chip {
+    font-size: 0.72rem;
+    padding: 0.25rem 0.6rem;
+  }
 }

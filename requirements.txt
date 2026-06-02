@@ -9,3 +9,4 @@ aiofiles
 httpx
 apscheduler
 jinja2
+pdfplumber

@@ -26,6 +26,7 @@ function App() {
   const [showAddApplication, setShowAddApplication] = useState(false)
   const [selectedApp, setSelectedApp] = useState(null)
   const [activeTab, setActiveTab] = useState('pipeline')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [jobSearchResults, setJobSearchResults] = useState([])
   const [jobSearching, setJobSearching] = useState(false)
   const [jobQuery, setJobQuery] = useState('')
@@ -443,7 +444,12 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>Job Landing Platform</h1>
+        <div className="header-left">
+          <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            {sidebarOpen ? '✕' : '☰'}
+          </button>
+          <h1>Job Landing Platform</h1>
+        </div>
         <div className="header-actions">
           <button className="btn btn-secondary" onClick={refreshSuggestions}>
             Refresh Suggestions
@@ -455,11 +461,11 @@ function App() {
       </header>
 
       <div className="main-content">
-        <aside className="sidebar">
+        <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <h3>Candidates</h3>
           <div
             className={`candidate-item ${!selectedCandidate ? 'active' : ''}`}
-            onClick={() => setSelectedCandidate(null)}
+            onClick={() => { setSelectedCandidate(null); setSidebarOpen(false) }}
           >
             <div className="name">All Candidates</div>
             <div className="role">Overview</div>
@@ -469,7 +475,7 @@ function App() {
               <li
                 key={c.id}
                 className={`candidate-item ${selectedCandidate?.id === c.id ? 'active' : ''}`}
-                onClick={() => setSelectedCandidate(c)}
+                onClick={() => { setSelectedCandidate(c); setSidebarOpen(false) }}
               >
                 <div className="name">{c.name}</div>
                 <div className="role">{c.target_role}</div>
@@ -1530,6 +1536,10 @@ function AddCandidateModal({ onSave, onClose }) {
     linkedin_url: '', skills: '', years_experience: '',
     location_preference: '', base_resume_text: '',
   })
+  const [importing, setImporting] = useState(false)
+  const [importMode, setImportMode] = useState(null) // null, 'pdf', 'text'
+  const [importText, setImportText] = useState('')
+  const [importMsg, setImportMsg] = useState('')
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -1539,26 +1549,131 @@ function AddCandidateModal({ onSave, onClose }) {
     })
   }
 
+  const handleLinkedInPdf = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    setImportMsg('')
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/candidates/import-linkedin', { method: 'POST', body: formData })
+      if (res.ok) {
+        const data = await res.json()
+        setForm(prev => ({
+          ...prev,
+          name: data.name || prev.name,
+          email: data.email || prev.email,
+          field: data.field || prev.field,
+          target_role: data.target_role || prev.target_role,
+          linkedin_url: data.linkedin_url || prev.linkedin_url,
+          skills: data.skills || prev.skills,
+          years_experience: data.years_experience || prev.years_experience,
+          location_preference: data.location_preference || prev.location_preference,
+          base_resume_text: data.base_resume_text || prev.base_resume_text,
+        }))
+        setImportMsg('Profile imported! Review and edit the fields below.')
+        setImportMode(null)
+      } else {
+        const err = await res.json()
+        setImportMsg(err.detail || 'Import failed')
+      }
+    } catch (err) {
+      setImportMsg('Error importing: ' + err.message)
+    }
+    setImporting(false)
+  }
+
+  const handleLinkedInText = async () => {
+    if (!importText.trim()) return
+    setImporting(true)
+    setImportMsg('')
+    try {
+      const formData = new FormData()
+      formData.append('text', importText)
+      const res = await fetch('/api/candidates/import-linkedin', { method: 'POST', body: formData })
+      if (res.ok) {
+        const data = await res.json()
+        setForm(prev => ({
+          ...prev,
+          name: data.name || prev.name,
+          email: data.email || prev.email,
+          field: data.field || prev.field,
+          target_role: data.target_role || prev.target_role,
+          linkedin_url: data.linkedin_url || prev.linkedin_url,
+          skills: data.skills || prev.skills,
+          years_experience: data.years_experience || prev.years_experience,
+          location_preference: data.location_preference || prev.location_preference,
+          base_resume_text: data.base_resume_text || prev.base_resume_text,
+        }))
+        setImportMsg('Profile imported! Review and edit the fields below.')
+        setImportMode(null)
+      } else {
+        const err = await res.json()
+        setImportMsg(err.detail || 'Import failed')
+      }
+    } catch (err) {
+      setImportMsg('Error importing: ' + err.message)
+    }
+    setImporting(false)
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <h2>Add Candidate</h2>
+
+        {/* LinkedIn Import Section */}
+        <div className="linkedin-import">
+          <div className="linkedin-import-header">
+            <span className="linkedin-label">Quick Import</span>
+            <div className="linkedin-buttons">
+              <button type="button" className={`btn btn-sm ${importMode === 'pdf' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setImportMode(importMode === 'pdf' ? null : 'pdf')}>
+                Upload LinkedIn PDF
+              </button>
+              <button type="button" className={`btn btn-sm ${importMode === 'text' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setImportMode(importMode === 'text' ? null : 'text')}>
+                Paste Profile Text
+              </button>
+            </div>
+          </div>
+          {importMode === 'pdf' && (
+            <div className="linkedin-import-body">
+              <p className="import-hint">Go to your LinkedIn profile &rarr; "More" button &rarr; "Save to PDF", then upload it here</p>
+              <input type="file" accept=".pdf" onChange={handleLinkedInPdf} disabled={importing} className="file-input" />
+            </div>
+          )}
+          {importMode === 'text' && (
+            <div className="linkedin-import-body">
+              <p className="import-hint">Go to your LinkedIn profile, select all text (Ctrl+A), copy (Ctrl+C), and paste below</p>
+              <textarea rows="5" placeholder="Paste your LinkedIn profile text here..." value={importText} onChange={e => setImportText(e.target.value)} />
+              <button type="button" className="btn btn-primary btn-sm" onClick={handleLinkedInText} disabled={importing || !importText.trim()} style={{ marginTop: '0.5rem' }}>
+                {importing ? 'Importing...' : 'Import'}
+              </button>
+            </div>
+          )}
+          {importMsg && <div className={`import-msg ${importMsg.includes('imported') ? 'success' : 'error'}`}>{importMsg}</div>}
+        </div>
+
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Name *</label>
-            <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          <div className="form-row">
+            <div className="form-group">
+              <label>Name *</label>
+              <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label>Email</label>
+              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+            </div>
           </div>
-          <div className="form-group">
-            <label>Email</label>
-            <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label>Field *</label>
-            <input required placeholder="e.g., Software Engineering, Marketing, Data Science" value={form.field} onChange={e => setForm({ ...form, field: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label>Target Role *</label>
-            <input required placeholder="e.g., Senior Frontend Engineer" value={form.target_role} onChange={e => setForm({ ...form, target_role: e.target.value })} />
+          <div className="form-row">
+            <div className="form-group">
+              <label>Field *</label>
+              <input required placeholder="e.g., Software Engineering" value={form.field} onChange={e => setForm({ ...form, field: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label>Target Role *</label>
+              <input required placeholder="e.g., Senior Frontend Engineer" value={form.target_role} onChange={e => setForm({ ...form, target_role: e.target.value })} />
+            </div>
           </div>
           <div className="form-group">
             <label>LinkedIn URL</label>
@@ -1568,17 +1683,19 @@ function AddCandidateModal({ onSave, onClose }) {
             <label>Skills (comma-separated)</label>
             <input placeholder="React, Python, AWS, ..." value={form.skills} onChange={e => setForm({ ...form, skills: e.target.value })} />
           </div>
-          <div className="form-group">
-            <label>Years of Experience</label>
-            <input type="number" value={form.years_experience} onChange={e => setForm({ ...form, years_experience: e.target.value })} />
+          <div className="form-row">
+            <div className="form-group">
+              <label>Years of Experience</label>
+              <input type="number" value={form.years_experience} onChange={e => setForm({ ...form, years_experience: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label>Location Preference</label>
+              <input placeholder="Remote, NYC..." value={form.location_preference} onChange={e => setForm({ ...form, location_preference: e.target.value })} />
+            </div>
           </div>
           <div className="form-group">
-            <label>Location Preference</label>
-            <input placeholder="Remote, NYC, SF Bay Area..." value={form.location_preference} onChange={e => setForm({ ...form, location_preference: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label>Resume Text (paste full resume)</label>
-            <textarea rows="8" placeholder="Paste the full text of the base resume here..." value={form.base_resume_text} onChange={e => setForm({ ...form, base_resume_text: e.target.value })} />
+            <label>Resume Text</label>
+            <textarea rows="6" placeholder="Paste resume here or import from LinkedIn above..." value={form.base_resume_text} onChange={e => setForm({ ...form, base_resume_text: e.target.value })} />
           </div>
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
