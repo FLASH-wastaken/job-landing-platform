@@ -71,7 +71,7 @@ app.include_router(alerts.router)
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "healthy", "version": "1.0.0"}
+    return {"status": "healthy", "version": "1.1.0"}
 
 
 # Serve React frontend in production
