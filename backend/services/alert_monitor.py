@@ -39,7 +39,7 @@ async def run_alert(alert: JobAlert, db: Session) -> dict:
         score = 0
         if candidate.base_resume_text and job.get("description"):
             jk = extract_keywords_from_job(job["description"])
-            score = compute_match_score(candidate.base_resume_text, jk)
+            score = compute_match_score(candidate.base_resume_text, jk, job["title"])
         elif candidate.skills:
             skills = [s.strip().lower() for s in candidate.skills.split(",")]
             desc = (job.get("description", "") + " " + job["title"]).lower()

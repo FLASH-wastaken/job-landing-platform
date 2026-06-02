@@ -26,6 +26,13 @@ TECH_KEYWORDS = {
     "seo", "sem", "google analytics", "a/b testing",
     "project management", "stakeholder management", "cross-functional",
     "leadership", "mentoring", "team management",
+    # IT / enterprise / analyst domain
+    "servicenow", "itsm", "itil", "automation", "rpa", "sap", "erp",
+    "sharepoint", "scada", "plc", "vba", "power automate", "power apps",
+    "business analysis", "systems analysis", "requirements gathering",
+    "incident management", "change management", "process optimization",
+    "business intelligence", "reporting", "dashboards", "active directory",
+    "vmware", "citrix", "networking", "troubleshooting",
 }
 
 # Multi-word phrases to detect in JD (ATS systems match these as complete phrases)
@@ -157,49 +164,105 @@ def extract_keywords_from_job(job_description: str) -> dict:
     return sections
 
 
-def compute_match_score(resume_text: str, job_keywords: dict) -> float:
-    """Score how well a resume matches a job description (0-100).
+# Generic filler tokens that must NOT count as a skill match on their own.
+# Matching requirements via these (e.g. "experience", "strong", "team") is what
+# inflated unrelated roles (Sales Manager, Video Editor) to 100%.
+STOPWORDS = {
+    "experience", "experienced", "years", "year", "strong", "excellent",
+    "good", "ability", "able", "skills", "skill", "knowledge", "understanding",
+    "work", "working", "team", "teams", "teamwork", "business", "company",
+    "role", "position", "candidate", "ideal", "must", "have", "should", "will",
+    "would", "your", "their", "with", "within", "across", "using", "various",
+    "related", "relevant", "including", "etc", "plus", "bonus", "preferred",
+    "required", "requirement", "requirements", "responsibilities", "responsible",
+    "duties", "help", "ensure", "drive", "driving", "deliver", "delivering",
+    "manage", "managing", "develop", "developing", "build", "building", "create",
+    "creating", "great", "high", "best", "well", "proven", "track", "record",
+    "looking", "join", "part", "full", "time", "environment", "fast", "paced",
+    "communication", "communicate", "written", "verbal", "interpersonal",
+    "detail", "oriented", "motivated", "passionate", "collaborate",
+    "collaborative", "stakeholders", "stakeholder", "organization",
+    "organizational", "problem", "solving", "analytical", "results",
+    "opportunity", "opportunities", "growth", "career", "people", "from",
+    "this", "that", "they", "them", "also", "more", "than", "into", "such",
+    "like", "who", "our", "you", "are", "all", "about", "what", "when", "where",
+}
 
-    Weighted scoring: required skills > keywords > preferred > soft skills.
+
+def _meaningful_tokens(text: str) -> list[str]:
+    """Tokens worth scoring on — drops generic filler so matches reflect real overlap."""
+    raw = re.findall(r"[a-zA-Z][a-zA-Z0-9+#./-]*", text.lower())
+    return [t for t in raw if len(t) > 3 and t not in STOPWORDS]
+
+
+def _keyword_in_text(keyword: str, text_lower: str) -> bool:
+    """Word-boundary-aware presence check so 'java' doesn't match 'javascript'."""
+    kw = keyword.lower().strip()
+    if not kw:
+        return False
+    if " " in kw or any(c in kw for c in "+#/."):
+        return kw in text_lower  # phrase or punctuated term — substring is fine
+    return re.search(r"\b" + re.escape(kw) + r"\b", text_lower) is not None
+
+
+def compute_match_score(resume_text: str, job_keywords: dict, job_title: str = None) -> float:
+    """Score how well a resume matches a job (0-100).
+
+    Robust scoring (replaces the old version that gave 100% to unrelated roles):
+    - A skill counts only when it carries a distinctive (non-filler) token that
+      actually appears in the resume — one generic word can't match a whole
+      requirement anymore.
+    - Sparse job descriptions can't trivially hit 100% (low-confidence cap).
+    - Job-title / domain alignment scales the score down for off-domain roles.
     """
     if not resume_text or not job_keywords:
         return 0.0
 
     resume_lower = resume_text.lower()
-    total_items = 0
-    matched_items = 0
+    resume_tokens = set(_meaningful_tokens(resume_text))
 
-    # Required skills — heaviest weight (3x)
-    for skill in job_keywords.get("required_skills", []):
-        total_items += 3
-        skill_words = [w for w in skill.split() if len(w) > 3]
-        if skill_words and any(word in resume_lower for word in skill_words):
-            matched_items += 3
+    total = 0.0
+    matched = 0.0
+    signal_count = 0
 
-    # Technical keywords — high weight (2x)
+    def score_skills(items, weight):
+        nonlocal total, matched, signal_count
+        for skill in items:
+            toks = _meaningful_tokens(skill)
+            if not toks:
+                continue  # pure-filler bullet — not a real signal
+            total += weight
+            signal_count += 1
+            if any(t in resume_tokens for t in toks):
+                matched += weight
+
+    score_skills(job_keywords.get("required_skills", []), 3)
+    score_skills(job_keywords.get("preferred_skills", []), 1.5)
+    score_skills(job_keywords.get("soft_skills", []), 1)
+
+    # Technical keywords — distinctive, word-boundary matched
     for keyword in job_keywords.get("keywords", []):
-        total_items += 2
-        if keyword.lower() in resume_lower:
-            matched_items += 2
+        total += 2
+        signal_count += 1
+        if _keyword_in_text(keyword, resume_lower):
+            matched += 2
 
-    # Preferred skills — medium weight (1.5x)
-    for skill in job_keywords.get("preferred_skills", []):
-        total_items += 1.5
-        skill_words = [w for w in skill.split() if len(w) > 3]
-        if skill_words and any(word in resume_lower for word in skill_words):
-            matched_items += 1.5
+    raw = 50.0 if total == 0 else (matched / total) * 100
 
-    # Soft skills — lower weight (1x)
-    for skill in job_keywords.get("soft_skills", []):
-        total_items += 1
-        clean = skill.replace("-", " ").replace(".", " ")
-        if any(w in resume_lower for w in clean.split() if len(w) > 4):
-            matched_items += 1
+    # Low-confidence guard: too few real signals to justify a high score.
+    if signal_count < 3:
+        raw = min(raw, 55.0)
 
-    if total_items == 0:
-        return 50.0
+    # Title / domain anchoring — an off-domain role can't score high just because
+    # generic words overlap. Full title overlap keeps the score; none cuts it to ~45%.
+    if job_title:
+        title_toks = _meaningful_tokens(job_title)
+        if title_toks:
+            hits = sum(1 for t in title_toks if t in resume_tokens)
+            align = hits / len(title_toks)
+            raw *= (0.45 + 0.55 * align)
 
-    return round((matched_items / total_items) * 100, 1)
+    return round(min(raw, 100.0), 1)
 
 
 def compute_ats_score(tailored_resume: str, job_keywords: dict, job_title: str) -> dict:
@@ -375,7 +438,7 @@ def generate_tailored_resume(base_resume: str, job_description: str, job_title: 
     tailored = _inject_keywords_into_skills(tailored, inject_list)
 
     # Step 3: Compute scores on the TAILORED resume (not the base)
-    match_score = compute_match_score(tailored, job_keywords)
+    match_score = compute_match_score(tailored, job_keywords, job_title)
     ats_result = compute_ats_score(tailored, job_keywords, job_title)
 
     # Build actionable tailoring notes

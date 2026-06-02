@@ -68,6 +68,7 @@ def _parse_profile_text(text: str) -> dict:
             break
 
     # Extract headline/title (usually right after the name)
+    headline = ""
     name_found = False
     for line in lines:
         if line == result["name"]:
@@ -76,16 +77,23 @@ def _parse_profile_text(text: str) -> dict:
         if name_found and line and not line.startswith("http"):
             # This is likely the headline
             if len(line) > 5 and len(line) < 200:
-                result["target_role"] = line
-                # Try to extract field from headline
+                headline = line
                 result["field"] = _extract_field(line)
                 break
 
-    # Extract LinkedIn URL
+    # Derive a concise, searchable target role (not the whole headline)
+    result["target_role"] = _extract_role(text, headline)
+
+    # Extract LinkedIn URL (accept bare www. form and add the protocol)
     for line in lines:
-        url_match = re.search(r"(https?://(?:www\.)?linkedin\.com/in/[^\s]+)", line)
+        url_match = re.search(
+            r"((?:https?://)?(?:www\.)?linkedin\.com/in/[\w%-]+)", line, re.IGNORECASE
+        )
         if url_match:
-            result["linkedin_url"] = url_match.group(1)
+            url = url_match.group(1)
+            if not url.lower().startswith("http"):
+                url = "https://" + url
+            result["linkedin_url"] = url
             break
 
     # Extract email
@@ -153,10 +161,16 @@ def _extract_field(headline: str) -> str:
         "fullstack": "Software Engineering",
         "devops": "Software Engineering",
         "sre": "Software Engineering",
+        "servicenow": "Technology / IT",
+        "automation": "Technology / IT",
+        "applications analyst": "Technology / IT",
+        "systems analyst": "Technology / IT",
+        "it support": "Technology / IT",
+        "help desk": "Technology / IT",
         "data scien": "Data Science",
         "machine learning": "Data Science",
         "ml engineer": "Data Science",
-        "ai ": "Data Science",
+        "artificial intelligence": "Data Science",
         "data analy": "Data & Analytics",
         "business intelligence": "Data & Analytics",
         "data engineer": "Data Engineering",
@@ -202,6 +216,51 @@ def _extract_field(headline: str) -> str:
     return "Technology"
 
 
+ROLE_NOUNS = {
+    "analyst", "engineer", "developer", "manager", "architect", "designer",
+    "scientist", "administrator", "consultant", "specialist", "director",
+    "technician", "coordinator", "programmer", "accountant", "recruiter",
+    "strategist", "officer", "associate", "representative", "lead",
+}
+
+
+def _concise_role(phrase: str) -> str:
+    """Trim a long role phrase to its core title, e.g.
+    'Downstream Oil and Gas Applications Analyst' -> 'Applications Analyst'."""
+    words = [w for w in re.split(r"\s+", phrase.strip()) if w]
+    last_noun_idx = None
+    for i, w in enumerate(words):
+        if w.lower().strip(",.&") in ROLE_NOUNS:
+            last_noun_idx = i
+    if last_noun_idx is not None:
+        start = max(0, last_noun_idx - 1)  # keep one modifier word
+        return " ".join(words[start:last_noun_idx + 1]).strip(" ,.&")
+    return " ".join(words[:6]).strip(" ,.&")
+
+
+def _extract_role(text: str, headline: str) -> str:
+    """Derive a concise, searchable target role from the profile.
+
+    Prefers the most recent real job title ('served as a <role> at <Company>'),
+    then a recognized role phrase in the headline, then the first headline segment.
+    Avoids dumping the entire headline into target_role.
+    """
+    m = re.search(r"\bas\s+an?\s+([A-Z][A-Za-z /&-]{4,60}?)\s+at\s+[A-Z]", text)
+    if m:
+        return _concise_role(m.group(1))
+
+    if headline:
+        seg = re.split(r"[|•·–—\n]", headline)[0].strip()
+        if any(re.search(r"\b" + n + r"\b", seg.lower()) for n in ROLE_NOUNS):
+            return _concise_role(seg)
+        pre_comma = seg.split(",")[0].strip()
+        if 1 <= len(pre_comma.split()) <= 6:
+            return pre_comma
+        return seg[:60].strip(" ,.&")
+
+    return ""
+
+
 def _extract_skills(text: str) -> list[str]:
     """Extract skills from LinkedIn profile text."""
     skills = []
@@ -237,11 +296,21 @@ def _extract_skills(text: str) -> list[str]:
         "Data Analysis", "Data Engineering", "Data Science",
         "Communication", "Leadership", "Team Management",
         "SEO", "Content Strategy", "Digital Marketing",
+        "ServiceNow", "ITSM", "ITIL", "Automation", "RPA", "SAP", "ERP",
+        "SharePoint", "Active Directory", "VMware", "Citrix", "PowerShell",
+        "Networking", "Business Intelligence", "Process Optimization",
+        "Systems Analysis", "Business Analysis", "Troubleshooting", "PLC", "SCADA",
     ]
 
-    scan_text = skills_section if skills_section else text
+    scan_lower = (skills_section if skills_section else text).lower()
     for skill in known_skills:
-        if skill.lower() in scan_text.lower():
+        sk = skill.lower()
+        if " " in sk or any(c in sk for c in "+#/."):
+            found = sk in scan_lower  # phrase or punctuated term — substring is safe
+        else:
+            # word-boundary match so 'R' doesn't match 'Founder' and 'Go' != 'Google'
+            found = re.search(r"\b" + re.escape(sk) + r"\b", scan_lower) is not None
+        if found:
             skills.append(skill)
 
     # Also grab bullet-point items from skills section

@@ -185,7 +185,7 @@ class AutoApplyAgent:
             score = 0
             if candidate.base_resume_text and job.get("description"):
                 job_keywords = extract_keywords_from_job(job["description"])
-                score = compute_match_score(candidate.base_resume_text, job_keywords)
+                score = compute_match_score(candidate.base_resume_text, job_keywords, job["title"])
             elif candidate.skills:
                 # Fallback: check skill overlap
                 skills = [s.strip().lower() for s in candidate.skills.split(",")]
