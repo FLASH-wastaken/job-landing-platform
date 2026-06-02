@@ -72,6 +72,7 @@ def list_applications(
             "job_url": a.job_url,
             "status": a.status.value,
             "match_score": a.match_score,
+            "ats_score": a.ats_score,
             "salary_range": a.salary_range,
             "location": a.location,
             "applied_at": a.applied_at.isoformat() if a.applied_at else None,
@@ -100,6 +101,7 @@ def get_application(app_id: int, db: Session = Depends(get_db)):
         "job_description": app.job_description,
         "status": app.status.value,
         "match_score": app.match_score,
+        "ats_score": app.ats_score,
         "salary_range": app.salary_range,
         "location": app.location,
         "tailored_resume_text": app.tailored_resume_text,
@@ -164,6 +166,7 @@ def create_application(data: ApplicationCreate, db: Session = Depends(get_db)):
         )
         app.tailored_resume_text = result["tailored_resume"]
         app.match_score = result["match_score"]
+        app.ats_score = result.get("ats_score")
 
         app.cover_letter = generate_cover_letter_draft(
             candidate.name,
@@ -187,7 +190,8 @@ def create_application(data: ApplicationCreate, db: Session = Depends(get_db)):
     return {
         "id": app.id,
         "match_score": app.match_score,
-        "message": "Application created with tailored resume",
+        "ats_score": app.ats_score,
+        "message": "Application created with ATS-optimized resume",
     }
 
 
@@ -258,6 +262,7 @@ def retailor_resume(app_id: int, db: Session = Depends(get_db)):
     )
     app.tailored_resume_text = result["tailored_resume"]
     app.match_score = result["match_score"]
+    app.ats_score = result.get("ats_score")
 
     app.cover_letter = generate_cover_letter_draft(
         candidate.name,
@@ -271,9 +276,11 @@ def retailor_resume(app_id: int, db: Session = Depends(get_db)):
 
     return {
         "match_score": result["match_score"],
+        "ats_score": result.get("ats_score"),
+        "ats_breakdown": result.get("ats_breakdown"),
         "missing_keywords": result["missing_keywords"],
         "tailoring_notes": result["tailoring_notes"],
-        "message": "Resume re-tailored",
+        "message": "Resume re-tailored with ATS optimization",
     }
 
 

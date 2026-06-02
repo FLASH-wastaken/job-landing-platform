@@ -66,6 +66,7 @@ class Application(Base):
     tailored_resume_path = Column(String(500))
     cover_letter = Column(Text)
     match_score = Column(Float)
+    ats_score = Column(Float)
     notes = Column(Text)
     applied_at = Column(DateTime)
     last_status_change = Column(DateTime, default=lambda: datetime.now(timezone.utc))

@@ -112,6 +112,7 @@ async def auto_apply_from_discovery(body: AutoApplyFromDiscovery):
                     continue
 
                 score = 0
+                ats = None
                 tailored_resume = None
                 cover_letter = None
 
@@ -124,6 +125,7 @@ async def auto_apply_from_discovery(body: AutoApplyFromDiscovery):
                     )
                     tailored_resume = result["tailored_resume"]
                     score = result["match_score"]
+                    ats = result.get("ats_score")
 
                     cover_letter = generate_cover_letter_draft(
                         candidate.name,
@@ -153,6 +155,7 @@ async def auto_apply_from_discovery(body: AutoApplyFromDiscovery):
                     location=location_str,
                     status=ApplicationStatus.SAVED,
                     match_score=round(score, 1),
+                    ats_score=ats,
                     tailored_resume_text=tailored_resume,
                     cover_letter=cover_letter,
                 )

@@ -237,6 +237,7 @@ class AutoApplyAgent:
                     )
                     app.tailored_resume_text = tailor_result["tailored_resume"]
                     app.match_score = tailor_result["match_score"]
+                    app.ats_score = tailor_result.get("ats_score")
 
                 # Auto-generate cover letter
                 if (

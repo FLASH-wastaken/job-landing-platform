@@ -453,7 +453,8 @@ function App() {
                         <div className="title">{app.job_title}</div>
                         {app.match_score && (
                           <div className="score">
-                            Match: {app.match_score}%
+                            <span>Match: {app.match_score}%</span>
+                            {app.ats_score && <span className="ats-tag">ATS {app.ats_score}%</span>}
                             <div className="score-bar">
                               <div
                                 className={`score-fill ${app.match_score >= 70 ? 'high' : app.match_score >= 40 ? 'medium' : 'low'}`}
@@ -1444,6 +1445,10 @@ function AppDetailModal({ app, onClose, onStatusChange }) {
           <div>
             <div style={{ fontSize: '0.75rem', color: '#71717a' }}>Match Score</div>
             <div style={{ fontWeight: 600 }}>{app.match_score ? `${app.match_score}%` : 'N/A'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#71717a' }}>ATS Score</div>
+            <div style={{ fontWeight: 600, color: app.ats_score >= 70 ? '#10b981' : app.ats_score >= 40 ? '#f59e0b' : '#ef4444' }}>{app.ats_score ? `${app.ats_score}%` : 'N/A'}</div>
           </div>
           <div>
             <div style={{ fontSize: '0.75rem', color: '#71717a' }}>Applied</div>
