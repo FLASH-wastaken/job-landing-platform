@@ -1520,3 +1520,269 @@ body {
 .score-badge.high { background: rgba(16, 185, 129, 0.15); color: #10b981; }
 .score-badge.medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
 .score-badge.low { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+/* ===== Job Alerts Tab ===== */
+.tab-nav .alerts-tab {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  color: #34d399;
+  font-weight: 500;
+  border-bottom: none;
+  margin-bottom: -1px;
+  padding-bottom: calc(0.75rem + 1px);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tab-nav .alerts-tab:hover {
+  background: rgba(16, 185, 129, 0.2);
+  color: #e4e4e7;
+}
+
+.tab-nav .alerts-tab.active {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
+  color: #e4e4e7;
+  border-bottom: 2px solid #10b981;
+}
+
+.alert-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+/* Alerts Section */
+.alerts-section h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+}
+
+.alerts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.alerts-subtitle {
+  font-size: 0.85rem;
+  color: #71717a;
+}
+
+/* Alert Feed (notifications) */
+.alert-feed {
+  background: #1a1b23;
+  border: 2px solid rgba(16, 185, 129, 0.3);
+  border-radius: 14px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.alert-feed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.alert-feed-header h3 {
+  font-size: 1rem;
+  color: #10b981;
+}
+
+.alert-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.alert-feed-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem;
+  background: #22232d;
+  border: 1px solid #2a2b35;
+  border-left: 3px solid #10b981;
+  border-radius: 8px;
+}
+
+.alert-feed-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.alert-feed-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.25rem;
+}
+
+.alert-feed-company {
+  font-size: 0.8rem;
+  color: #8b5cf6;
+  padding: 0.2rem 0.6rem;
+  background: #22232d;
+  border: 1px solid #2a2b35;
+  border-radius: 20px;
+}
+
+.alert-feed-from {
+  font-size: 0.72rem;
+  color: #52525b;
+  font-style: italic;
+}
+
+.alert-feed-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* Alert Cards */
+.alert-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.alert-card {
+  background: #1a1b23;
+  border: 1px solid #2a2b35;
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: border-color 0.2s;
+}
+
+.alert-card.inactive {
+  opacity: 0.6;
+}
+
+.alert-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.alert-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.alert-card-name {
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.alert-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #52525b;
+  flex-shrink: 0;
+}
+
+.alert-status-dot.active {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.alert-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.4rem;
+}
+
+.alert-card-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: #71717a;
+}
+
+.alert-unseen-badge {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  padding: 0.1rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.alert-card-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* Alert Results List */
+.alert-results-list {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #2a2b35;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.alert-results-empty {
+  font-size: 0.82rem;
+  color: #52525b;
+  text-align: center;
+  padding: 1rem;
+}
+
+.alert-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: #22232d;
+  gap: 0.75rem;
+}
+
+.alert-result-item.unseen {
+  border-left: 3px solid #10b981;
+}
+
+.alert-result-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.alert-result-company {
+  font-size: 0.78rem;
+  color: #71717a;
+}
+
+.alert-result-actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-shrink: 0;
+}

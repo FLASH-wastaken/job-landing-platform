@@ -115,6 +115,44 @@ class Suggestion(Base):
     application = relationship("Application", back_populates="suggestions")
 
 
+class JobAlert(Base):
+    __tablename__ = "job_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    candidate_id = Column(Integer, ForeignKey("candidates.id"), nullable=False)
+    name = Column(String(200), nullable=False)
+    search_query = Column(String(300), nullable=False)
+    location = Column(String(200), default="")
+    min_match_score = Column(Integer, default=30)
+    is_active = Column(Integer, default=1)
+    frequency_minutes = Column(Integer, default=60)
+    last_run_at = Column(DateTime)
+    total_found = Column(Integer, default=0)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    candidate = relationship("Candidate")
+    results = relationship("AlertResult", back_populates="alert")
+
+
+class AlertResult(Base):
+    __tablename__ = "alert_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    alert_id = Column(Integer, ForeignKey("job_alerts.id"), nullable=False)
+    job_title = Column(String(300), nullable=False)
+    company = Column(String(200), nullable=False)
+    url = Column(String(500))
+    location = Column(String(200))
+    salary = Column(String(100))
+    source = Column(String(100))
+    match_score = Column(Float)
+    is_seen = Column(Integer, default=0)
+    is_saved = Column(Integer, default=0)
+    found_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    alert = relationship("JobAlert", back_populates="results")
+
+
 class TimelineEvent(Base):
     __tablename__ = "timeline_events"
 

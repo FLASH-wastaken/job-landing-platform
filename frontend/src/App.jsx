@@ -55,6 +55,12 @@ function App() {
   const [selectedRolesForApply, setSelectedRolesForApply] = useState([])
   const [autoApplyRunning, setAutoApplyRunning] = useState(false)
   const [autoApplyResult, setAutoApplyResult] = useState(null)
+  // Job Alerts state
+  const [alerts, setAlerts] = useState([])
+  const [alertFeed, setAlertFeed] = useState({ unseen_total: 0, results: [] })
+  const [alertResults, setAlertResults] = useState({})
+  const [showAddAlert, setShowAddAlert] = useState(false)
+  const [alertRunning, setAlertRunning] = useState({})
 
   useEffect(() => {
     fetchDashboard()
@@ -334,6 +340,92 @@ function App() {
     setAutoApplyRunning(false)
   }
 
+  // Job Alert functions
+  async function fetchAlerts() {
+    try {
+      const url = selectedCandidate ? `${API}/alerts?candidate_id=${selectedCandidate.id}` : `${API}/alerts`
+      const res = await fetch(url)
+      if (res.ok) setAlerts(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
+  async function fetchAlertFeed() {
+    try {
+      const res = await fetch(`${API}/alerts/feed/all`)
+      if (res.ok) setAlertFeed(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
+  async function createAlert(data) {
+    const res = await fetch(`${API}/alerts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (res.ok) {
+      fetchAlerts()
+      setShowAddAlert(false)
+    }
+  }
+
+  async function toggleAlert(id, isActive) {
+    await fetch(`${API}/alerts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: !isActive }),
+    })
+    fetchAlerts()
+  }
+
+  async function deleteAlert(id) {
+    await fetch(`${API}/alerts/${id}`, { method: 'DELETE' })
+    fetchAlerts()
+    fetchAlertFeed()
+  }
+
+  async function runAlertNow(id) {
+    setAlertRunning(prev => ({ ...prev, [id]: true }))
+    try {
+      const res = await fetch(`${API}/alerts/${id}/run`, { method: 'POST' })
+      if (res.ok) {
+        fetchAlerts()
+        fetchAlertFeed()
+        fetchAlertResults(id)
+      }
+    } catch (e) { console.error(e) }
+    setAlertRunning(prev => ({ ...prev, [id]: false }))
+  }
+
+  async function fetchAlertResults(id) {
+    try {
+      const res = await fetch(`${API}/alerts/${id}/results`)
+      if (res.ok) {
+        const data = await res.json()
+        setAlertResults(prev => ({ ...prev, [id]: data }))
+      }
+    } catch (e) { console.error(e) }
+  }
+
+  async function markAlertResultSeen(resultId) {
+    await fetch(`${API}/alerts/results/${resultId}/seen`, { method: 'PUT' })
+    fetchAlertFeed()
+  }
+
+  async function saveAlertResultToPipeline(resultId) {
+    const res = await fetch(`${API}/alerts/results/${resultId}/save`, { method: 'POST' })
+    if (res.ok) {
+      fetchAlertFeed()
+      fetchApplications(selectedCandidate?.id)
+      fetchDashboard()
+    }
+  }
+
+  async function markAllSeen(alertId) {
+    await fetch(`${API}/alerts/${alertId}/mark-all-seen`, { method: 'POST' })
+    fetchAlerts()
+    fetchAlertFeed()
+  }
+
   function resetQuiz() {
     setQuizStep(0)
     setQuizAnswers({ interests: [], skills: [], workstyle: {}, values: [] })
@@ -427,6 +519,9 @@ function App() {
             </button>
             <button className={`discover-tab ${activeTab === 'discover' ? 'active' : ''}`} onClick={() => setActiveTab('discover')}>
               Discover Yourself
+            </button>
+            <button className={`alerts-tab ${activeTab === 'alerts' ? 'active' : ''}`} onClick={() => { setActiveTab('alerts'); fetchAlerts(); fetchAlertFeed() }}>
+              Job Alerts {alertFeed.unseen_total > 0 && <span className="alert-badge-count">{alertFeed.unseen_total}</span>}
             </button>
           </div>
 
@@ -1220,6 +1315,176 @@ function App() {
               )}
             </div>
           )}
+
+          {activeTab === 'alerts' && (
+            <div className="alerts-section">
+              <div className="alerts-header">
+                <div>
+                  <h2>Job Alerts</h2>
+                  <p className="alerts-subtitle">Continuous monitoring — get notified when new matching jobs appear</p>
+                </div>
+                <button className="btn btn-primary" onClick={() => setShowAddAlert(true)}>
+                  + New Alert
+                </button>
+              </div>
+
+              {/* Notification Feed */}
+              {alertFeed.unseen_total > 0 && (
+                <div className="alert-feed">
+                  <div className="alert-feed-header">
+                    <h3>New Matches ({alertFeed.unseen_total})</h3>
+                  </div>
+                  <div className="alert-feed-list">
+                    {alertFeed.results.slice(0, 10).map(r => (
+                      <div key={r.id} className="alert-feed-item">
+                        <div className="alert-feed-info">
+                          <div className="alert-feed-title">{r.job_title}</div>
+                          <div className="alert-feed-meta">
+                            <span className="alert-feed-company">{r.company}</span>
+                            {r.location && <span className="job-tag">{r.location}</span>}
+                            {r.salary && <span className="job-tag salary">{r.salary}</span>}
+                            <span className="job-tag source">{r.source}</span>
+                          </div>
+                          <div className="alert-feed-from">
+                            from "{r.alert_name}" for {r.candidate_name}
+                          </div>
+                        </div>
+                        <div className="alert-feed-actions">
+                          {r.match_score && (
+                            <span className={`score-badge ${r.match_score >= 70 ? 'high' : r.match_score >= 40 ? 'medium' : 'low'}`}>
+                              {r.match_score}%
+                            </span>
+                          )}
+                          <button className="btn btn-success btn-sm" onClick={() => saveAlertResultToPipeline(r.id)}>
+                            Save to Pipeline
+                          </button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => markAlertResultSeen(r.id)}>
+                            Dismiss
+                          </button>
+                          {r.url && (
+                            <a href={r.url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+                              View
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Alert Cards */}
+              {alerts.length === 0 ? (
+                <div className="empty-state" style={{ marginTop: '2rem' }}>
+                  <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No job alerts set up yet</p>
+                  <p style={{ color: '#71717a', fontSize: '0.85rem' }}>Create an alert to automatically monitor job boards for new openings</p>
+                </div>
+              ) : (
+                <div className="alert-cards">
+                  {alerts.map(alert => (
+                    <div key={alert.id} className={`alert-card ${alert.is_active ? '' : 'inactive'}`}>
+                      <div className="alert-card-header">
+                        <div className="alert-card-info">
+                          <div className="alert-card-name">
+                            <span className={`alert-status-dot ${alert.is_active ? 'active' : ''}`} />
+                            {alert.name}
+                          </div>
+                          <div className="alert-card-meta">
+                            <span className="job-tag">{alert.search_query}</span>
+                            {alert.location && <span className="job-tag">{alert.location}</span>}
+                            <span className="job-tag">Min {alert.min_match_score}%</span>
+                            <span className="job-tag">Every {alert.frequency_minutes}m</span>
+                          </div>
+                          <div className="alert-card-stats">
+                            <span>{alert.candidate_name}</span>
+                            <span>&middot;</span>
+                            <span>{alert.total_found} found total</span>
+                            {alert.unseen_count > 0 && (
+                              <span className="alert-unseen-badge">{alert.unseen_count} new</span>
+                            )}
+                            {alert.last_run_at && (
+                              <>
+                                <span>&middot;</span>
+                                <span>Last checked {new Date(alert.last_run_at).toLocaleString()}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="alert-card-actions">
+                          <button
+                            className={`btn btn-sm ${alertRunning[alert.id] ? 'btn-warning' : 'btn-primary'}`}
+                            disabled={alertRunning[alert.id]}
+                            onClick={() => runAlertNow(alert.id)}
+                          >
+                            {alertRunning[alert.id] ? 'Searching...' : 'Search Now'}
+                          </button>
+                          <button
+                            className={`btn btn-sm ${alert.is_active ? 'btn-secondary' : 'btn-success'}`}
+                            onClick={() => toggleAlert(alert.id, alert.is_active)}
+                          >
+                            {alert.is_active ? 'Pause' : 'Resume'}
+                          </button>
+                          {alert.unseen_count > 0 && (
+                            <button className="btn btn-secondary btn-sm" onClick={() => markAllSeen(alert.id)}>
+                              Mark All Seen
+                            </button>
+                          )}
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              if (alertResults[alert.id]) {
+                                setAlertResults(prev => { const n = {...prev}; delete n[alert.id]; return n })
+                              } else {
+                                fetchAlertResults(alert.id)
+                              }
+                            }}
+                          >
+                            {alertResults[alert.id] ? 'Hide Results' : 'Show Results'}
+                          </button>
+                          <button className="btn btn-secondary btn-sm" style={{ color: '#ef4444' }} onClick={() => deleteAlert(alert.id)}>
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      {alertResults[alert.id] && (
+                        <div className="alert-results-list">
+                          {alertResults[alert.id].length === 0 ? (
+                            <div className="alert-results-empty">No results yet — run a search to find matches</div>
+                          ) : (
+                            alertResults[alert.id].map(r => (
+                              <div key={r.id} className={`alert-result-item ${r.is_seen ? 'seen' : 'unseen'}`}>
+                                <div className="alert-result-info">
+                                  <div className="alert-result-title">{r.job_title}</div>
+                                  <div className="alert-result-company">{r.company} {r.location && `· ${r.location}`}</div>
+                                </div>
+                                <div className="alert-result-actions">
+                                  {r.match_score && (
+                                    <span className={`score-badge ${r.match_score >= 70 ? 'high' : r.match_score >= 40 ? 'medium' : 'low'}`}>
+                                      {r.match_score}%
+                                    </span>
+                                  )}
+                                  {!r.is_saved && (
+                                    <button className="btn btn-success btn-sm" onClick={() => saveAlertResultToPipeline(r.id)}>
+                                      Save
+                                    </button>
+                                  )}
+                                  {r.is_saved && <span className="badge-ready">Saved</span>}
+                                  {r.url && (
+                                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">View</a>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </main>
       </div>
 
@@ -1234,6 +1499,16 @@ function App() {
           candidateId={selectedCandidate.id}
           onSave={addApplication}
           onClose={() => setShowAddApplication(false)}
+        />
+      )}
+
+      {/* Add Alert Modal */}
+      {showAddAlert && (
+        <AddAlertModal
+          candidates={candidates}
+          selectedCandidate={selectedCandidate}
+          onSave={createAlert}
+          onClose={() => setShowAddAlert(false)}
         />
       )}
 
@@ -1414,6 +1689,67 @@ function JobCard({ job, candidates, onSave }) {
           View Full Listing →
         </a>
       )}
+    </div>
+  )
+}
+
+function AddAlertModal({ candidates, selectedCandidate, onSave, onClose }) {
+  const [form, setForm] = useState({
+    candidate_id: selectedCandidate?.id || '',
+    name: '',
+    search_query: '',
+    location: '',
+    min_match_score: 30,
+    frequency_minutes: 60,
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSave({ ...form, candidate_id: parseInt(form.candidate_id) })
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <h2>Create Job Alert</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Candidate *</label>
+            <select required value={form.candidate_id} onChange={e => setForm({ ...form, candidate_id: e.target.value })}>
+              <option value="">Select candidate...</option>
+              {candidates.map(c => (
+                <option key={c.id} value={c.id}>{c.name} — {c.target_role}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Alert Name *</label>
+            <input required placeholder="e.g., Remote React Jobs" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Search Query *</label>
+            <input required placeholder="e.g., React Developer, Full Stack, Python Engineer" value={form.search_query} onChange={e => setForm({ ...form, search_query: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Location (optional)</label>
+            <input placeholder="Remote, NYC, London..." value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label>Min Match Score</label>
+              <input type="number" min="0" max="100" value={form.min_match_score} onChange={e => setForm({ ...form, min_match_score: parseInt(e.target.value) || 0 })} />
+            </div>
+            <div className="form-group">
+              <label>Check Every (minutes)</label>
+              <input type="number" min="15" max="1440" value={form.frequency_minutes} onChange={e => setForm({ ...form, frequency_minutes: parseInt(e.target.value) || 60 })} />
+            </div>
+          </div>
+          <div className="form-actions">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Create Alert</button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
