@@ -955,3 +955,553 @@ body {
   color: #a1a1aa;
   word-break: break-word;
 }
+
+/* ===== Discover Tab Button ===== */
+.tab-nav .discover-tab {
+  margin-left: auto;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.15));
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 8px;
+  color: #c084fc;
+  font-weight: 500;
+  border-bottom: none;
+  margin-bottom: -1px;
+  padding-bottom: calc(0.75rem + 1px);
+}
+
+.tab-nav .discover-tab:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.25));
+  color: #e4e4e7;
+}
+
+.tab-nav .discover-tab.active {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+  border-color: #8b5cf6;
+  color: #e4e4e7;
+  border-bottom: 2px solid #8b5cf6;
+}
+
+/* ===== Discovery Quiz Section ===== */
+.discover-section {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Intro */
+.quiz-intro {
+  text-align: center;
+  padding: 3rem 2rem;
+  position: relative;
+}
+
+.quiz-intro-glow {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.quiz-intro-title {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.75rem;
+}
+
+.quiz-intro-sub {
+  font-size: 1rem;
+  color: #a1a1aa;
+  max-width: 500px;
+  margin: 0 auto 2.5rem;
+  line-height: 1.7;
+}
+
+.quiz-intro-steps {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+
+.intro-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.intro-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.intro-step-text {
+  font-size: 0.85rem;
+  color: #a1a1aa;
+}
+
+.btn-lg {
+  padding: 0.75rem 2rem !important;
+  font-size: 1rem !important;
+  border-radius: 12px !important;
+}
+
+/* Quiz Steps */
+.quiz-step {
+  animation: fadeIn 0.3s ease;
+}
+
+.quiz-progress {
+  height: 4px;
+  background: #2a2b35;
+  border-radius: 2px;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.quiz-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.quiz-step-header {
+  margin-bottom: 1.5rem;
+}
+
+.quiz-step-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8b5cf6;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.quiz-step-header h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.quiz-step-header p {
+  color: #71717a;
+  font-size: 0.9rem;
+}
+
+/* Quiz Option Grid */
+.quiz-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: #1a1b23;
+  border: 2px solid #2a2b35;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  color: #e4e4e7;
+  font-family: inherit;
+  font-size: 0.88rem;
+}
+
+.quiz-option:hover {
+  border-color: #6366f1;
+  background: #22232d;
+}
+
+.quiz-option.selected {
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.1);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.3);
+}
+
+.quiz-option.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.quiz-option-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.quiz-option-label {
+  font-weight: 500;
+}
+
+/* Work Style */
+.workstyle-group {
+  margin-bottom: 1.5rem;
+}
+
+.workstyle-group h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #a1a1aa;
+  margin-bottom: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.workstyle-options {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.workstyle-btn {
+  flex: 1;
+  padding: 0.85rem;
+  background: #1a1b23;
+  border: 2px solid #2a2b35;
+  border-radius: 10px;
+  color: #e4e4e7;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.workstyle-btn:hover {
+  border-color: #6366f1;
+}
+
+.workstyle-btn.selected {
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.1);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.3);
+}
+
+.quiz-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #2a2b35;
+}
+
+/* ===== Quiz Results ===== */
+.quiz-results {
+  animation: fadeIn 0.4s ease;
+}
+
+.quiz-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.quiz-results-header h2 {
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.quiz-results-sub {
+  color: #71717a;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.role-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.role-card {
+  background: #1a1b23;
+  border: 1px solid #2a2b35;
+  border-radius: 14px;
+  padding: 1.25rem;
+  transition: all 0.2s;
+}
+
+.role-card.top-match {
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.role-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.role-card-rank {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #22232d;
+  border: 1px solid #3a3b45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #a1a1aa;
+  flex-shrink: 0;
+}
+
+.role-card.top-match .role-card-rank {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-color: transparent;
+  color: white;
+}
+
+.role-card-info {
+  flex: 1;
+}
+
+.role-card-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.role-card-field {
+  font-size: 0.8rem;
+  color: #71717a;
+  margin-top: 0.15rem;
+}
+
+.role-match-badge {
+  padding: 0.35rem 0.85rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.role-match-badge.high {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.role-match-badge.medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.role-match-badge.low {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.role-card-skills {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: #a1a1aa;
+  line-height: 1.6;
+}
+
+.role-skills-label {
+  color: #71717a;
+  font-weight: 500;
+}
+
+.role-card-bar {
+  height: 4px;
+  background: #2a2b35;
+  border-radius: 2px;
+  margin-top: 0.75rem;
+  overflow: hidden;
+}
+
+.role-card-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.role-card-fill.high { background: linear-gradient(90deg, #10b981, #34d399); }
+.role-card-fill.medium { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.role-card-fill.low { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+.role-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+/* Role job previews */
+.role-jobs-preview {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #2a2b35;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.role-job-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #22232d;
+  border-radius: 8px;
+}
+
+.role-job-title {
+  font-size: 0.82rem;
+  font-weight: 500;
+  flex: 1;
+}
+
+.role-job-company {
+  font-size: 0.78rem;
+  color: #8b5cf6;
+}
+
+.role-job-link {
+  font-size: 0.72rem;
+  color: #6366f1;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.role-job-link:hover {
+  text-decoration: underline;
+}
+
+.role-jobs-empty {
+  font-size: 0.8rem;
+  color: #52525b;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+/* ===== Discovery Auto-Apply Panel ===== */
+.discovery-auto-apply {
+  background: #1a1b23;
+  border: 2px solid rgba(139, 92, 246, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  position: sticky;
+  bottom: 1rem;
+}
+
+.discovery-auto-apply-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.discovery-auto-apply-header h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+}
+
+.discovery-auto-apply-header p {
+  font-size: 0.85rem;
+  color: #a1a1aa;
+}
+
+.selected-roles-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1rem;
+}
+
+.role-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: #c084fc;
+}
+
+.role-chip button {
+  background: none;
+  border: none;
+  color: #c084fc;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.role-chip button:hover {
+  color: #ef4444;
+}
+
+/* Auto-apply results */
+.auto-apply-jobs-list {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #2a2b35;
+}
+
+.auto-apply-jobs-list h4 {
+  font-size: 0.85rem;
+  color: #a1a1aa;
+  margin-bottom: 0.75rem;
+}
+
+.auto-apply-job-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid #22232d;
+}
+
+.auto-apply-job-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.auto-apply-job-company {
+  font-size: 0.78rem;
+  color: #8b5cf6;
+}
+
+.auto-apply-job-badges {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.score-badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.score-badge.high { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.score-badge.medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.score-badge.low { background: rgba(239, 68, 68, 0.15); color: #ef4444; }

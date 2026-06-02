@@ -45,6 +45,16 @@ function App() {
     auto_tailor: true,
     auto_cover_letter: true,
   })
+  // Discovery quiz state
+  const [quizStep, setQuizStep] = useState(0) // 0=intro, 1-4=questions, 5=results
+  const [quizAnswers, setQuizAnswers] = useState({ interests: [], skills: [], workstyle: {}, values: [] })
+  const [quizResults, setQuizResults] = useState(null)
+  const [quizLoading, setQuizLoading] = useState(false)
+  const [discoveryJobs, setDiscoveryJobs] = useState({})
+  const [discoveryJobsLoading, setDiscoveryJobsLoading] = useState({})
+  const [selectedRolesForApply, setSelectedRolesForApply] = useState([])
+  const [autoApplyRunning, setAutoApplyRunning] = useState(false)
+  const [autoApplyResult, setAutoApplyResult] = useState(null)
 
   useEffect(() => {
     fetchDashboard()
@@ -256,6 +266,83 @@ function App() {
     fetchDashboard()
   }
 
+  // Discovery quiz functions
+  async function submitQuiz() {
+    setQuizLoading(true)
+    try {
+      const res = await fetch(`${API}/discovery/results`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quizAnswers),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setQuizResults(data)
+        setQuizStep(5)
+        setSelectedRolesForApply([])
+        setAutoApplyResult(null)
+      }
+    } catch (e) { console.error(e) }
+    setQuizLoading(false)
+  }
+
+  async function searchRoleJobs(role) {
+    setDiscoveryJobsLoading(prev => ({ ...prev, [role.role]: true }))
+    try {
+      const res = await fetch(`${API}/discovery/search-roles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ search_terms: role.search_terms, location: '', limit: 5 }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setDiscoveryJobs(prev => ({ ...prev, [role.role]: data.jobs }))
+      }
+    } catch (e) { console.error(e) }
+    setDiscoveryJobsLoading(prev => ({ ...prev, [role.role]: false }))
+  }
+
+  function toggleRoleForApply(roleName) {
+    setSelectedRolesForApply(prev =>
+      prev.includes(roleName) ? prev.filter(r => r !== roleName) : [...prev, roleName]
+    )
+  }
+
+  async function runDiscoveryAutoApply() {
+    if (!selectedCandidate || selectedRolesForApply.length === 0) return
+    setAutoApplyRunning(true)
+    setAutoApplyResult(null)
+    try {
+      const res = await fetch(`${API}/discovery/auto-apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidate_id: selectedCandidate.id,
+          roles: selectedRolesForApply,
+          max_per_role: 5,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAutoApplyResult(data)
+        fetchApplications(selectedCandidate?.id)
+        fetchDashboard()
+      }
+    } catch (e) {
+      setAutoApplyResult({ status: 'error', error: e.message })
+    }
+    setAutoApplyRunning(false)
+  }
+
+  function resetQuiz() {
+    setQuizStep(0)
+    setQuizAnswers({ interests: [], skills: [], workstyle: {}, values: [] })
+    setQuizResults(null)
+    setDiscoveryJobs({})
+    setSelectedRolesForApply([])
+    setAutoApplyResult(null)
+  }
+
   const pipelineApps = PIPELINE_COLUMNS.reduce((acc, status) => {
     acc[status] = applications.filter(a => a.status === status)
     return acc
@@ -337,6 +424,9 @@ function App() {
             </button>
             <button className={activeTab === 'suggestions' ? 'active' : ''} onClick={() => setActiveTab('suggestions')}>
               Suggestions ({dashboard?.top_suggestions?.length || 0})
+            </button>
+            <button className={`discover-tab ${activeTab === 'discover' ? 'active' : ''}`} onClick={() => setActiveTab('discover')}>
+              Discover Yourself
             </button>
           </div>
 
@@ -687,6 +777,446 @@ function App() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeTab === 'discover' && (
+            <div className="discover-section">
+              {/* Step 0: Intro */}
+              {quizStep === 0 && (
+                <div className="quiz-intro">
+                  <div className="quiz-intro-glow" />
+                  <h2 className="quiz-intro-title">Discover Your Ideal Career</h2>
+                  <p className="quiz-intro-sub">
+                    Not sure what role fits you best? Take this 2-minute quiz to uncover your
+                    strengths, passions, and ideal job roles — then auto-apply with tailored
+                    resumes for each one.
+                  </p>
+                  <div className="quiz-intro-steps">
+                    <div className="intro-step">
+                      <div className="intro-step-num">1</div>
+                      <div className="intro-step-text">Tell us what excites you</div>
+                    </div>
+                    <div className="intro-step">
+                      <div className="intro-step-num">2</div>
+                      <div className="intro-step-text">Share your natural strengths</div>
+                    </div>
+                    <div className="intro-step">
+                      <div className="intro-step-num">3</div>
+                      <div className="intro-step-text">Describe your ideal work style</div>
+                    </div>
+                    <div className="intro-step">
+                      <div className="intro-step-num">4</div>
+                      <div className="intro-step-text">Pick what matters most</div>
+                    </div>
+                  </div>
+                  <button className="btn btn-primary btn-lg" onClick={() => setQuizStep(1)}>
+                    Start Discovery Quiz
+                  </button>
+                </div>
+              )}
+
+              {/* Step 1: Interests */}
+              {quizStep === 1 && (
+                <div className="quiz-step">
+                  <div className="quiz-progress">
+                    <div className="quiz-progress-bar" style={{ width: '25%' }} />
+                  </div>
+                  <div className="quiz-step-header">
+                    <span className="quiz-step-tag">Step 1 of 4</span>
+                    <h2>What excites you?</h2>
+                    <p>Pick everything that sparks your curiosity</p>
+                  </div>
+                  <div className="quiz-options-grid">
+                    {[
+                      { id: 'build', label: 'Building things from scratch', icon: '\u{1F528}' },
+                      { id: 'analyze', label: 'Analyzing data & finding patterns', icon: '\u{1F4CA}' },
+                      { id: 'design', label: 'Designing beautiful experiences', icon: '\u{1F3A8}' },
+                      { id: 'lead', label: 'Leading teams & shaping strategy', icon: '\u{1F9ED}' },
+                      { id: 'persuade', label: 'Persuading & communicating ideas', icon: '\u{1F4E3}' },
+                      { id: 'solve', label: 'Solving technical puzzles', icon: '\u{1F9E9}' },
+                      { id: 'write', label: 'Writing & storytelling', icon: '\u{270F}\u{FE0F}' },
+                      { id: 'optimize', label: 'Organizing & optimizing processes', icon: '\u{2699}\u{FE0F}' },
+                      { id: 'numbers', label: 'Working with numbers & finance', icon: '\u{1F4B0}' },
+                      { id: 'help', label: 'Helping people learn & grow', icon: '\u{2764}\u{FE0F}' },
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        className={`quiz-option ${quizAnswers.interests.includes(opt.id) ? 'selected' : ''}`}
+                        onClick={() => {
+                          setQuizAnswers(prev => ({
+                            ...prev,
+                            interests: prev.interests.includes(opt.id)
+                              ? prev.interests.filter(i => i !== opt.id)
+                              : [...prev.interests, opt.id]
+                          }))
+                        }}
+                      >
+                        <span className="quiz-option-icon">{opt.icon}</span>
+                        <span className="quiz-option-label">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="quiz-nav">
+                    <button className="btn btn-secondary" onClick={() => setQuizStep(0)}>Back</button>
+                    <button
+                      className="btn btn-primary"
+                      disabled={quizAnswers.interests.length === 0}
+                      onClick={() => setQuizStep(2)}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Skills */}
+              {quizStep === 2 && (
+                <div className="quiz-step">
+                  <div className="quiz-progress">
+                    <div className="quiz-progress-bar" style={{ width: '50%' }} />
+                  </div>
+                  <div className="quiz-step-header">
+                    <span className="quiz-step-tag">Step 2 of 4</span>
+                    <h2>What are you naturally good at?</h2>
+                    <p>Pick your top strengths</p>
+                  </div>
+                  <div className="quiz-options-grid">
+                    {[
+                      { id: 'coding', label: 'Programming & coding', icon: '\u{1F4BB}' },
+                      { id: 'visual', label: 'Visual design & aesthetics', icon: '\u{1F441}\u{FE0F}' },
+                      { id: 'data', label: 'Data analysis & statistics', icon: '\u{1F4C8}' },
+                      { id: 'communication', label: 'Communication & presenting', icon: '\u{1F399}\u{FE0F}' },
+                      { id: 'debugging', label: 'Problem solving & debugging', icon: '\u{1F41B}' },
+                      { id: 'pm', label: 'Project management & planning', icon: '\u{1F4C5}' },
+                      { id: 'content', label: 'Writing & content creation', icon: '\u{270D}\u{FE0F}' },
+                      { id: 'sales', label: 'Sales & negotiation', icon: '\u{1F91D}' },
+                      { id: 'leadership', label: 'Leadership & mentoring', icon: '\u{1F465}' },
+                      { id: 'research', label: 'Research & learning quickly', icon: '\u{1F50D}' },
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        className={`quiz-option ${quizAnswers.skills.includes(opt.id) ? 'selected' : ''}`}
+                        onClick={() => {
+                          setQuizAnswers(prev => ({
+                            ...prev,
+                            skills: prev.skills.includes(opt.id)
+                              ? prev.skills.filter(i => i !== opt.id)
+                              : [...prev.skills, opt.id]
+                          }))
+                        }}
+                      >
+                        <span className="quiz-option-icon">{opt.icon}</span>
+                        <span className="quiz-option-label">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="quiz-nav">
+                    <button className="btn btn-secondary" onClick={() => setQuizStep(1)}>Back</button>
+                    <button
+                      className="btn btn-primary"
+                      disabled={quizAnswers.skills.length === 0}
+                      onClick={() => setQuizStep(3)}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Work Style */}
+              {quizStep === 3 && (
+                <div className="quiz-step">
+                  <div className="quiz-progress">
+                    <div className="quiz-progress-bar" style={{ width: '75%' }} />
+                  </div>
+                  <div className="quiz-step-header">
+                    <span className="quiz-step-tag">Step 3 of 4</span>
+                    <h2>How do you like to work?</h2>
+                    <p>Pick the option that fits you best</p>
+                  </div>
+
+                  <div className="workstyle-group">
+                    <h4>Team dynamic</h4>
+                    <div className="workstyle-options">
+                      {[
+                        { id: 'solo', label: 'Mostly solo / deep focus' },
+                        { id: 'small_team', label: 'Small collaborative team' },
+                        { id: 'large_team', label: 'Large cross-functional team' },
+                      ].map(opt => (
+                        <button
+                          key={opt.id}
+                          className={`workstyle-btn ${quizAnswers.workstyle.team === opt.id ? 'selected' : ''}`}
+                          onClick={() => setQuizAnswers(prev => ({
+                            ...prev, workstyle: { ...prev.workstyle, team: opt.id }
+                          }))}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="workstyle-group">
+                    <h4>Work style</h4>
+                    <div className="workstyle-options">
+                      {[
+                        { id: 'creative', label: 'Creative & open-ended' },
+                        { id: 'balanced', label: 'Mix of creative and structured' },
+                        { id: 'structured', label: 'Structured & process-driven' },
+                      ].map(opt => (
+                        <button
+                          key={opt.id}
+                          className={`workstyle-btn ${quizAnswers.workstyle.structure === opt.id ? 'selected' : ''}`}
+                          onClick={() => setQuizAnswers(prev => ({
+                            ...prev, workstyle: { ...prev.workstyle, structure: opt.id }
+                          }))}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="workstyle-group">
+                    <h4>Pace</h4>
+                    <div className="workstyle-options">
+                      {[
+                        { id: 'fast', label: 'Fast-paced & high energy' },
+                        { id: 'moderate', label: 'Steady & sustainable' },
+                        { id: 'flexible', label: 'Self-paced & flexible' },
+                      ].map(opt => (
+                        <button
+                          key={opt.id}
+                          className={`workstyle-btn ${quizAnswers.workstyle.pace === opt.id ? 'selected' : ''}`}
+                          onClick={() => setQuizAnswers(prev => ({
+                            ...prev, workstyle: { ...prev.workstyle, pace: opt.id }
+                          }))}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="quiz-nav">
+                    <button className="btn btn-secondary" onClick={() => setQuizStep(2)}>Back</button>
+                    <button
+                      className="btn btn-primary"
+                      disabled={!quizAnswers.workstyle.team || !quizAnswers.workstyle.structure || !quizAnswers.workstyle.pace}
+                      onClick={() => setQuizStep(4)}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Values */}
+              {quizStep === 4 && (
+                <div className="quiz-step">
+                  <div className="quiz-progress">
+                    <div className="quiz-progress-bar" style={{ width: '100%' }} />
+                  </div>
+                  <div className="quiz-step-header">
+                    <span className="quiz-step-tag">Step 4 of 4</span>
+                    <h2>What matters most in your career?</h2>
+                    <p>Pick your top 3 values</p>
+                  </div>
+                  <div className="quiz-options-grid">
+                    {[
+                      { id: 'salary', label: 'High compensation', icon: '\u{1F4B5}' },
+                      { id: 'balance', label: 'Work-life balance', icon: '\u{2696}\u{FE0F}' },
+                      { id: 'innovation', label: 'Innovation & creativity', icon: '\u{1F4A1}' },
+                      { id: 'impact', label: 'Helping others / social impact', icon: '\u{1F30D}' },
+                      { id: 'growth', label: 'Career growth & advancement', icon: '\u{1F4C8}' },
+                      { id: 'security', label: 'Job security & stability', icon: '\u{1F6E1}\u{FE0F}' },
+                      { id: 'autonomy', label: 'Autonomy & independence', icon: '\u{1F3F4}' },
+                      { id: 'collaboration', label: 'Team & collaboration', icon: '\u{1F91D}' },
+                      { id: 'scale', label: 'Impact at massive scale', icon: '\u{1F680}' },
+                      { id: 'learning', label: 'Continuous learning', icon: '\u{1F4DA}' },
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        className={`quiz-option ${quizAnswers.values.includes(opt.id) ? 'selected' : ''} ${quizAnswers.values.length >= 3 && !quizAnswers.values.includes(opt.id) ? 'disabled' : ''}`}
+                        onClick={() => {
+                          if (quizAnswers.values.length >= 3 && !quizAnswers.values.includes(opt.id)) return
+                          setQuizAnswers(prev => ({
+                            ...prev,
+                            values: prev.values.includes(opt.id)
+                              ? prev.values.filter(i => i !== opt.id)
+                              : [...prev.values, opt.id]
+                          }))
+                        }}
+                      >
+                        <span className="quiz-option-icon">{opt.icon}</span>
+                        <span className="quiz-option-label">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="quiz-nav">
+                    <button className="btn btn-secondary" onClick={() => setQuizStep(3)}>Back</button>
+                    <button
+                      className="btn btn-primary btn-lg"
+                      disabled={quizAnswers.values.length === 0 || quizLoading}
+                      onClick={submitQuiz}
+                    >
+                      {quizLoading ? 'Analyzing...' : 'See My Results'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 5: Results */}
+              {quizStep === 5 && quizResults && (
+                <div className="quiz-results">
+                  <div className="quiz-results-header">
+                    <div>
+                      <h2>Your Ideal Roles</h2>
+                      <p className="quiz-results-sub">Based on your interests, skills, work style, and values</p>
+                    </div>
+                    <button className="btn btn-secondary" onClick={resetQuiz}>Retake Quiz</button>
+                  </div>
+
+                  <div className="role-cards">
+                    {quizResults.roles.map((role, i) => (
+                      <div key={role.role} className={`role-card ${i < 3 ? 'top-match' : ''}`}>
+                        <div className="role-card-header">
+                          <div className="role-card-rank">#{i + 1}</div>
+                          <div className="role-card-info">
+                            <div className="role-card-title">{role.role}</div>
+                            <div className="role-card-field">{role.field}</div>
+                          </div>
+                          <div className={`role-match-badge ${role.match_percent >= 70 ? 'high' : role.match_percent >= 40 ? 'medium' : 'low'}`}>
+                            {role.match_percent}% match
+                          </div>
+                        </div>
+                        <div className="role-card-skills">
+                          <span className="role-skills-label">Skills needed:</span> {role.skills_needed}
+                        </div>
+                        <div className="role-card-bar">
+                          <div
+                            className={`role-card-fill ${role.match_percent >= 70 ? 'high' : role.match_percent >= 40 ? 'medium' : 'low'}`}
+                            style={{ width: `${role.match_percent}%` }}
+                          />
+                        </div>
+                        <div className="role-card-actions">
+                          <button
+                            className={`btn btn-sm ${selectedRolesForApply.includes(role.role) ? 'btn-success' : 'btn-secondary'}`}
+                            onClick={() => toggleRoleForApply(role.role)}
+                          >
+                            {selectedRolesForApply.includes(role.role) ? 'Selected for Auto-Apply' : 'Select for Auto-Apply'}
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            disabled={discoveryJobsLoading[role.role]}
+                            onClick={() => searchRoleJobs(role)}
+                          >
+                            {discoveryJobsLoading[role.role] ? 'Searching...' : discoveryJobs[role.role] ? `${discoveryJobs[role.role].length} jobs found` : 'See Open Jobs'}
+                          </button>
+                        </div>
+                        {discoveryJobs[role.role] && discoveryJobs[role.role].length > 0 && (
+                          <div className="role-jobs-preview">
+                            {discoveryJobs[role.role].slice(0, 3).map((job, j) => (
+                              <div key={j} className="role-job-item">
+                                <div className="role-job-title">{job.title}</div>
+                                <div className="role-job-company">{job.company}</div>
+                                {job.url && <a href={job.url} target="_blank" rel="noopener noreferrer" className="role-job-link">View Listing</a>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {discoveryJobs[role.role] && discoveryJobs[role.role].length === 0 && (
+                          <div className="role-jobs-empty">No open positions found right now</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Auto-Apply Panel */}
+                  {selectedRolesForApply.length > 0 && (
+                    <div className="discovery-auto-apply">
+                      <div className="discovery-auto-apply-header">
+                        <div>
+                          <h3>Auto-Apply to {selectedRolesForApply.length} Role{selectedRolesForApply.length > 1 ? 's' : ''}</h3>
+                          <p>
+                            {selectedCandidate
+                              ? `Applying as ${selectedCandidate.name} — CV and cover letter will be customized for each job`
+                              : 'Select a candidate from the sidebar first'}
+                          </p>
+                        </div>
+                        <button
+                          className={`btn ${autoApplyRunning ? 'btn-warning' : 'btn-primary'} btn-lg`}
+                          disabled={autoApplyRunning || !selectedCandidate}
+                          onClick={runDiscoveryAutoApply}
+                        >
+                          {autoApplyRunning ? 'Applying...' : 'Auto-Apply Now'}
+                        </button>
+                      </div>
+                      <div className="selected-roles-chips">
+                        {selectedRolesForApply.map(r => (
+                          <span key={r} className="role-chip">
+                            {r}
+                            <button onClick={() => toggleRoleForApply(r)}>&times;</button>
+                          </span>
+                        ))}
+                      </div>
+
+                      {autoApplyRunning && (
+                        <div className="agent-running" style={{ marginTop: '1rem' }}>
+                          <div className="spinner"></div>
+                          <p>Searching job boards, tailoring resumes & cover letters for each application...</p>
+                        </div>
+                      )}
+
+                      {autoApplyResult && !autoApplyRunning && (
+                        <div className={`agent-result ${autoApplyResult.status === 'error' ? 'error' : ''}`} style={{ marginTop: '1rem' }}>
+                          {autoApplyResult.status === 'error' ? (
+                            <p className="error-text">Error: {autoApplyResult.error}</p>
+                          ) : (
+                            <>
+                              <div className="result-stats">
+                                <div className="result-stat">
+                                  <span className="result-number">{autoApplyResult.total_discovered || 0}</span>
+                                  <span className="result-label">Jobs Found</span>
+                                </div>
+                                <div className="result-stat">
+                                  <span className="result-number">{autoApplyResult.total_applied || 0}</span>
+                                  <span className="result-label">Applications Created</span>
+                                </div>
+                                <div className="result-stat">
+                                  <span className="result-number">{autoApplyResult.jobs?.filter(j => j.has_tailored_resume).length || 0}</span>
+                                  <span className="result-label">Resumes Tailored</span>
+                                </div>
+                              </div>
+                              {autoApplyResult.jobs && autoApplyResult.jobs.length > 0 && (
+                                <div className="auto-apply-jobs-list">
+                                  <h4>Applications Created</h4>
+                                  {autoApplyResult.jobs.map((job, i) => (
+                                    <div key={i} className="auto-apply-job-item">
+                                      <div className="auto-apply-job-info">
+                                        <div className="auto-apply-job-title">{job.title}</div>
+                                        <div className="auto-apply-job-company">{job.company}</div>
+                                      </div>
+                                      <div className="auto-apply-job-badges">
+                                        <span className={`score-badge ${job.score >= 70 ? 'high' : job.score >= 40 ? 'medium' : 'low'}`}>
+                                          {job.score}%
+                                        </span>
+                                        {job.has_tailored_resume && <span className="badge-ready">CV</span>}
+                                        {job.has_cover_letter && <span className="badge-ready">Cover Letter</span>}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </main>
