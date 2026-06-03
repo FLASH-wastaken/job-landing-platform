@@ -1871,6 +1871,31 @@ function AddAlertModal({ candidates, selectedCandidate, onSave, onClose }) {
   )
 }
 
+function MaterialBlock({ title, text, copyKey, copied, loading, onCopy, onDownload }) {
+  return (
+    <div className="material-block">
+      <div className="material-header">
+        <h3>{title}</h3>
+        <div className="material-actions">
+          <button className="btn btn-secondary btn-sm" disabled={!text} onClick={onCopy}>
+            {copied === copyKey ? 'Copied!' : 'Copy'}
+          </button>
+          <button className="btn btn-secondary btn-sm" disabled={!text} onClick={onDownload}>
+            Download
+          </button>
+        </div>
+      </div>
+      {loading ? (
+        <div className="material-loading">Loading…</div>
+      ) : text ? (
+        <pre className="material-text">{text}</pre>
+      ) : (
+        <div className="material-empty">Not generated for this application (no job description was available to tailor from).</div>
+      )}
+    </div>
+  )
+}
+
 function AppDetailModal({ app, onClose, onStatusChange }) {
   const nextStatuses = {
     saved: ['applied'],
@@ -1884,9 +1909,68 @@ function AppDetailModal({ app, onClose, onStatusChange }) {
 
   const available = nextStatuses[app.status] || []
 
+  const [detail, setDetail] = useState(null)
+  const [loadingDetail, setLoadingDetail] = useState(true)
+  const [copied, setCopied] = useState('')
+
+  useEffect(() => {
+    let active = true
+    setLoadingDetail(true)
+    fetch(`${API}/applications/${app.id}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (active) { setDetail(d); setLoadingDetail(false) } })
+      .catch(() => { if (active) setLoadingDetail(false) })
+    return () => { active = false }
+  }, [app.id])
+
+  const copy = (text, which) => {
+    if (!text) return
+    const fallback = () => {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.focus(); ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      } catch (e) { /* clipboard unavailable */ }
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(fallback)
+      } else {
+        fallback()
+      }
+    } catch (e) {
+      fallback()
+    }
+    // Optimistic feedback — not contingent on the clipboard promise resolving
+    setCopied(which)
+    setTimeout(() => setCopied(''), 2000)
+  }
+  const download = (text, filename) => {
+    if (!text) return
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const resume = detail?.tailored_resume_text
+  const cover = detail?.cover_letter
+  const jobUrl = detail?.job_url || app.job_url
+  const safeName = (app.company_name || 'company').replace(/[^a-z0-9]/gi, '_').slice(0, 40)
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
         <h2>{app.job_title}</h2>
         <p style={{ color: '#a1a1aa', marginBottom: '1rem' }}>{app.company_name}</p>
 
@@ -1913,6 +1997,12 @@ function AppDetailModal({ app, onClose, onStatusChange }) {
           </div>
         </div>
 
+        {jobUrl && (
+          <a href={jobUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ marginBottom: '1.25rem', display: 'inline-block' }}>
+            Open Job Listing to Apply →
+          </a>
+        )}
+
         {available.length > 0 && (
           <div style={{ marginBottom: '1.5rem' }}>
             <div style={{ fontSize: '0.8rem', color: '#71717a', marginBottom: '0.5rem' }}>Move to:</div>
@@ -1925,6 +2015,17 @@ function AppDetailModal({ app, onClose, onStatusChange }) {
             </div>
           </div>
         )}
+
+        <div className="materials-section">
+          <MaterialBlock
+            title="Tailored Resume" text={resume} copyKey="resume" copied={copied} loading={loadingDetail}
+            onCopy={() => copy(resume, 'resume')} onDownload={() => download(resume, `Resume_${safeName}.txt`)}
+          />
+          <MaterialBlock
+            title="Cover Letter" text={cover} copyKey="cover" copied={copied} loading={loadingDetail}
+            onCopy={() => copy(cover, 'cover')} onDownload={() => download(cover, `CoverLetter_${safeName}.txt`)}
+          />
+        </div>
 
         <div className="form-actions">
           <button className="btn btn-secondary" onClick={onClose}>Close</button>

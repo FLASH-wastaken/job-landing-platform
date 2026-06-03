@@ -1807,6 +1807,64 @@ body {
   flex-shrink: 0;
 }
 
+/* ===== Application materials (CV + cover letter viewer) ===== */
+.modal-wide {
+  max-width: 760px;
+}
+
+.materials-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.material-block {
+  border: 1px solid #2a2b35;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #16171d;
+}
+
+.material-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.85rem;
+  background: #1a1b23;
+  border-bottom: 1px solid #2a2b35;
+}
+
+.material-header h3 {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.material-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.material-text {
+  margin: 0;
+  padding: 0.85rem;
+  max-height: 280px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #d4d4d8;
+}
+
+.material-loading,
+.material-empty {
+  padding: 1rem 0.85rem;
+  font-size: 0.82rem;
+  color: #71717a;
+}
+
 /* ===== LinkedIn Import ===== */
 .linkedin-import {
   background: #22232d;
